@@ -492,6 +492,9 @@ body.editing #nav{transform:none!important}
 }
 #editbar #eb-exit{background:transparent;border:1px solid var(--line);color:var(--txt2)}
 #editbar #eb-app{background:transparent;border:1px solid var(--red);color:var(--red)}
+#editbar #eb-publish{background:#27E6A5;color:#06281d}
+#editbar #eb-save{background:transparent;border:1px solid var(--line);color:var(--txt2)}
+#editbar #eb-sync{background:transparent;border:1px solid var(--line);color:var(--txt2)}
 .pw-ov{
   position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.75);
   display:flex;align-items:center;justify-content:center;padding:20px;
@@ -1231,9 +1234,14 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     addMovieTools();
     const bar = document.createElement('div');
     bar.id = 'editbar';
-    bar.innerHTML = '<span>編集モード — 赤枠の文字をタップで書き換え / 写真をタップで差し替え</span><button id="eb-save" type="button">保存してダウンロード</button><button id="eb-app" type="button">管理アプリ</button><button id="eb-exit" type="button">終了</button>';
+    bar.innerHTML = '<span>編集モード — 文字/写真を変更したら「全員に共有」</span><button id="eb-publish" type="button">全員に共有</button><button id="eb-save" type="button">バックアップ保存</button><button id="eb-sync" type="button">共有設定</button><button id="eb-app" type="button">管理アプリ</button><button id="eb-exit" type="button">終了</button>';
     document.body.appendChild(bar);
     document.getElementById('eb-save').addEventListener('click', saveFile);
+    document.getElementById('eb-publish').addEventListener('click', function(){
+      if (window.tpSite && window.tpSite.isReady()){ window.tpSite.publish(); }
+      else if (window.tpSite){ window.tpSite.openSyncSetup(); }
+    });
+    document.getElementById('eb-sync').addEventListener('click', function(){ if (window.tpSite) window.tpSite.openSyncSetup(); });
     document.getElementById('eb-app').addEventListener('click', function(){ window.open('app.html', '_blank'); });
     document.getElementById('eb-exit').addEventListener('click', endEdit);
   }
@@ -1431,6 +1439,254 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   }
 })();
 })();
+</script>
+<script>
+/* ============================================================
+   tulip party SITE — Firestore 自動同期レイヤー
+   文字編集・動画リスト・差し替え写真を Firestore に保存し、
+   サイトを開いた全員に自動反映する。写真は1枚=1ドキュメント
+   (Storage不要・Sparkプラン無料枠で動作)。
+   ============================================================ */
+(function(){
+  "use strict";
+  var EDIT_SEL = '.gig-date, .gig-hero h3, .gig-hero .place, .live-note, .album .meta h3, .album .meta time, .album .tag, .album .price b, .tracks li, .face .role, .face h3, #contact p.lead, .movie-cap span, .hero-meta span, .release-chip .rc-txt';
+
+  function readCfg(){
+    try { return JSON.parse(localStorage.getItem('tp-cfg') || 'null'); } catch(e){ return null; }
+  }
+  // 招待リンク (#site-join=...) を開いた場合は設定を取り込む
+  (function(){
+    try {
+      var m = location.hash.match(/site-join=([A-Za-z0-9_\-]+)/);
+      if (m){
+        var dec = decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/'))));
+        var j = JSON.parse(dec);
+        if (j && j.c && j.b){ localStorage.setItem('tp-cfg', JSON.stringify({ fb:j.c, bandId:j.b })); }
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+    } catch(e){}
+  })();
+
+  var FB = null;            // { appM, fsM, db, docRef, imgCol }
+  var CLIENT = 'site' + Math.random().toString(36).slice(2);
+  var ready = false;
+
+  function toast(msg, color){
+    var t = document.createElement('div');
+    t.className = 'ed-toast';
+    if (color) t.style.borderColor = color;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function(){ t.remove(); }, 4500);
+  }
+
+  /* ---- Firestore 接続 ---- */
+  async function connect(cfg){
+    var appM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+    var fsM  = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+    var app = appM.initializeApp(cfg.fb, 'site-' + Date.now());
+    var db = fsM.getFirestore(app);
+    var docRef = fsM.doc(db, 'bands', cfg.bandId, 'site', 'content');
+    FB = { fsM: fsM, db: db, docRef: docRef, bandId: cfg.bandId };
+    return FB;
+  }
+
+  /* ---- 受信した内容をページに適用 ---- */
+  function applyContent(data){
+    if (!data) return;
+    try {
+      // 1) 動画リスト
+      if (typeof data.movieList === 'string'){
+        var ml = document.getElementById('movie-list');
+        if (ml){
+          var pvSrc = null;
+          var pv0 = ml.querySelector('#playervid');
+          if (pv0 && pv0.getAttribute('src')) pvSrc = pv0.getAttribute('src');
+          ml.innerHTML = data.movieList;
+          var pv1 = ml.querySelector('#playervid');
+          if (pv1 && pvSrc) pv1.setAttribute('src', pvSrc); // ローカルの動画ソースは保持
+        }
+      }
+      // 2) 文字編集 (index対応)
+      if (Array.isArray(data.texts)){
+        var els = document.querySelectorAll(EDIT_SEL);
+        data.texts.forEach(function(html, i){
+          if (html != null && els[i]) els[i].innerHTML = html;
+        });
+      }
+      // 3) 写真 (data.images = { ei: dataURL })
+      if (data.images && typeof data.images === 'object'){
+        Object.keys(data.images).forEach(function(ei){
+          var url = data.images[ei];
+          if (!url) return;
+          document.querySelectorAll('img[data-ei="' + ei + '"]').forEach(function(im){
+            if (im.id === 'chipcover') { im.src = url; return; }
+            im.src = url;
+          });
+        });
+      }
+      // リフロー系(ScrollTrigger)に変更を知らせる
+      if (window.ScrollTrigger && window.ScrollTrigger.refresh){ try { window.ScrollTrigger.refresh(); } catch(e){} }
+    } catch(e){ /* 適用失敗は無視(サイトは素のHTMLで表示) */ }
+  }
+
+  /* ---- 起動: 設定があれば購読開始 ---- */
+  async function boot(){
+    var cfg = readCfg();
+    if (!cfg) return; // 同期未設定: 通常のサイトとして表示
+    try {
+      await connect(cfg);
+      // 大きな画像を含む可能性 → まず本体を取得して即時適用
+      var snap = await FB.fsM.getDoc(FB.docRef);
+      if (snap.exists()){
+        var d = snap.data();
+        // 画像は別コレクションから読む
+        d.images = await loadImages();
+        applyContent(d);
+      }
+      // 以後リアルタイム購読(本文のみ。画像は保存時に更新通知で取りに行く)
+      FB.fsM.onSnapshot(FB.docRef, async function(s){
+        if (!s.exists()) return;
+        var dd = s.data();
+        if (dd._client === CLIENT) return;
+        dd.images = await loadImages();
+        applyContent(dd);
+      });
+      ready = true;
+    } catch(e){
+      toast('共有の読み込みに失敗しました(通常表示にします)');
+    }
+  }
+
+  async function loadImages(){
+    if (!FB) return {};
+    var out = {};
+    try {
+      var col = FB.fsM.collection(FB.db, 'bands', FB.bandId, 'siteImages');
+      var qs = await FB.fsM.getDocs(col);
+      qs.forEach(function(doc){ var v = doc.data(); if (v && v.url) out[doc.id] = v.url; });
+    } catch(e){}
+    return out;
+  }
+
+  /* ---- 現在の編集内容を収集 ---- */
+  function collect(){
+    var texts = [];
+    document.querySelectorAll(EDIT_SEL).forEach(function(el){ texts.push(el.innerHTML); });
+    var movieList = '';
+    var ml = document.getElementById('movie-list');
+    if (ml){
+      var clone = ml.cloneNode(true);
+      var pv = clone.querySelector('#playervid');
+      if (pv) pv.removeAttribute('src');
+      clone.querySelectorAll('.mv-tools').forEach(function(el){ el.remove(); });
+      clone.querySelectorAll('[contenteditable]').forEach(function(el){ el.removeAttribute('contenteditable'); });
+      clone.querySelectorAll('[style]').forEach(function(el){ el.removeAttribute('style'); });
+      movieList = clone.innerHTML;
+    }
+    // 変更写真: data-ei を持ち data URL になっているもの
+    var images = {};
+    var done = {};
+    document.querySelectorAll('img[data-ei]').forEach(function(im){
+      var k = im.getAttribute('data-ei');
+      if (done[k]) return; done[k] = 1;
+      if (im.id === 'chipcover') return;
+      var src = im.getAttribute('src') || '';
+      if (src.indexOf('data:') === 0) images[k] = src;
+    });
+    return { texts: texts, movieList: movieList, images: images };
+  }
+
+  /* ---- Firestore へ保存(全員に共有) ---- */
+  async function publish(){
+    var cfg = readCfg();
+    if (!cfg){ toast('先に「共有設定」が必要です(管理アプリと同じ設定)'); return false; }
+    if (!FB){ try { await connect(cfg); } catch(e){ toast('共有に接続できませんでした'); return false; } }
+    var data = collect();
+    try {
+      // 画像は1枚=1ドキュメント(1MB制限回避)。差分のみ書き込み
+      var imgIds = Object.keys(data.images);
+      for (var i=0; i<imgIds.length; i++){
+        var ei = imgIds[i];
+        var ref = FB.fsM.doc(FB.db, 'bands', cfg.bandId, 'siteImages', String(ei));
+        await FB.fsM.setDoc(ref, { url: data.images[ei], _ts: Date.now() });
+      }
+      // 本文(画像URLは含めない→軽量)
+      await FB.fsM.setDoc(FB.docRef, {
+        texts: data.texts,
+        movieList: data.movieList,
+        _client: CLIENT,
+        _ts: Date.now()
+      });
+      toast('全員に共有しました(GitHub不要)', '#27E6A5');
+      return true;
+    } catch(e){
+      toast('共有の保存に失敗: ' + (e && e.message ? String(e.message).slice(0,60) : ''));
+      return false;
+    }
+  }
+
+  /* ---- 共有設定UI(編集バーから呼ぶ) ---- */
+  function openSyncSetup(){
+    if (document.querySelector('.pw-ov')) return;
+    var cfg = readCfg();
+    var ov = document.createElement('div');
+    ov.className = 'pw-ov';
+    var inviteBtn = cfg ? '<button id="sy-invite" type="button" style="margin-top:8px">招待リンクをコピー</button>' : '';
+    ov.innerHTML = '<div class="pw-box" style="max-width:520px">' +
+      '<p>サイトの共有設定</p>' +
+      '<small style="display:block;line-height:1.7;margin-bottom:8px">' + (cfg ? '共有は設定済みです。下のボタンでメンバーを招待できます。' : '管理アプリと同じ firebaseConfig を貼り付けてください。これでサイトの編集も全員に自動共有されます。') + '</small>' +
+      (cfg ? '' : '<textarea id="sy-cfg" style="width:100%;height:120px;background:#1c1c21;color:#f4f2ed;border:1px solid #2a2a30;border-radius:8px;padding:10px;font-family:monospace;font-size:12px" placeholder="const firebaseConfig = { apiKey: ... };"></textarea>') +
+      '<div class="pw-btns">' +
+        '<button id="sy-close" type="button">閉じる</button>' +
+        (cfg ? '<button id="sy-off" type="button">共有を解除</button>' : '<button id="sy-on" type="button">共有をONにする</button>') +
+      '</div>' + inviteBtn +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#sy-close').addEventListener('click', function(){ ov.remove(); });
+    var onBtn = ov.querySelector('#sy-on');
+    if (onBtn) onBtn.addEventListener('click', async function(){
+      var txt = ov.querySelector('#sy-cfg').value || '';
+      var m = txt.match(/\{[\s\S]*\}/);
+      if (!m){ toast('firebaseConfig の { } が見つかりません'); return; }
+      var parsed = null;
+      try { parsed = (new Function('return (' + m[0] + ')'))(); } catch(e){ toast('設定を読み取れませんでした'); return; }
+      if (!parsed || !parsed.apiKey || !parsed.projectId){ toast('apiKey / projectId が見つかりません'); return; }
+      var rid = (function(n){ var a='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',s=''; for(var i=0;i<n;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; })(28);
+      localStorage.setItem('tp-cfg', JSON.stringify({ fb: parsed, bandId: rid }));
+      ov.remove();
+      toast('共有をONにしました。今の内容を全員へ共有します…', '#27E6A5');
+      FB = null;
+      await publish();
+      boot();
+    });
+    var offBtn = ov.querySelector('#sy-off');
+    if (offBtn) offBtn.addEventListener('click', function(){
+      localStorage.removeItem('tp-cfg'); FB = null; ov.remove();
+      toast('共有を解除しました(このスマホのみ)');
+    });
+    var invBtn = ov.querySelector('#sy-invite');
+    if (invBtn) invBtn.addEventListener('click', function(){
+      var c = readCfg(); if (!c) return;
+      var payload = btoa(unescape(encodeURIComponent(JSON.stringify({ c:c.fb, b:c.bandId })))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      var url = location.href.split('#')[0] + '#site-join=' + payload;
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(function(){ toast('招待リンクをコピーしました', '#27E6A5'); }).catch(function(){ window.prompt('コピーして送ってください', url); });
+      } else window.prompt('コピーして送ってください', url);
+    });
+  }
+
+  // 外部(編集バー)から使えるよう公開
+  window.tpSite = { publish: publish, openSyncSetup: openSyncSetup, isReady: function(){ return !!readCfg(); } };
+
+  // DOM構築後に購読開始
+  if (document.readyState === 'complete' || document.readyState === 'interactive'){
+    setTimeout(boot, 0);
+  } else {
+    window.addEventListener('DOMContentLoaded', boot);
+  }
+})();
+
 </script>
 </body>
 </html>
