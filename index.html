@@ -1662,8 +1662,14 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   "use strict";
   var EDIT_SEL = '.live-note, .album .meta h3, .album .meta time, .album .tag, .album .price b, .tracks li, .face .role, .face h3, #contact p.lead, .movie-cap span, .hero-meta span, .release-chip .rc-txt';
 
+  var TP_FIXED = { fb: {"apiKey": "AIzaSyATfDbH1lY99kj3UanVpLCcsXBcsCFMyX0", "authDomain": "tulip-party.firebaseapp.com", "projectId": "tulip-party", "storageBucket": "tulip-party.firebasestorage.app", "messagingSenderId": "957611196667", "appId": "1:957611196667:web:a9daa9204b0d770a42f05e"}, bandId: 'ih4hFne3hoNEjEnCLGaQ1owA8gYm' };
   function readCfg(){
-    try { return JSON.parse(localStorage.getItem('tp-cfg') || 'null'); } catch(e){ return null; }
+    try {
+      var c = JSON.parse(localStorage.getItem('tp-cfg') || 'null');
+      if (c && c.fb && c.bandId) return c;
+    } catch(e){}
+    // 保存が無ければ埋め込み済みの固定設定で自動接続(常に同じ部屋)
+    return TP_FIXED;
   }
   // 招待リンク (#site-join=...) を開いた場合は設定を取り込む
   (function(){
@@ -1855,54 +1861,24 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   /* ---- 共有設定UI(編集バーから呼ぶ) ---- */
   function openSyncSetup(){
     if (document.querySelector('.pw-ov')) return;
-    var cfg = readCfg();
     var ov = document.createElement('div');
     ov.className = 'pw-ov';
-    var inviteBtn = cfg ? '<button id="sy-invite" type="button" style="margin-top:8px">招待リンクをコピー</button>' : '';
     ov.innerHTML = '<div class="pw-box" style="max-width:520px">' +
-      '<p>サイトの共有設定</p>' +
-      '<small style="display:block;line-height:1.7;margin-bottom:8px">' + (cfg ? '共有は設定済みです。下のボタンでメンバーを招待できます。' : '管理アプリと同じ firebaseConfig を貼り付けてください。これでサイトの編集も全員に自動共有されます。') + '</small>' +
-      (cfg ? '' : '<textarea id="sy-cfg" style="width:100%;height:120px;background:#1c1c21;color:#f4f2ed;border:1px solid #2a2a30;border-radius:8px;padding:10px;font-family:monospace;font-size:12px" placeholder="const firebaseConfig = { apiKey: ... };"></textarea>') +
-      '<div class="pw-btns">' +
-        '<button id="sy-close" type="button">閉じる</button>' +
-        (cfg ? '<button id="sy-off" type="button">共有を解除</button>' : '<button id="sy-on" type="button">共有をONにする</button>') +
-      '</div>' + inviteBtn +
+      '<p>サイトの共有(自動ON)</p>' +
+      '<small style="display:block;line-height:1.7;margin-bottom:10px">このサイトは管理アプリと<strong>同じデータに自動で繋がって</strong>います。設定は不要です。メンバーには下のリンクを送れば、開くだけで同じ内容が見られます。</small>' +
+      '<div class="pw-btns"><button id="sy-close" type="button">閉じる</button><button id="sy-invite" type="button">招待リンクをコピー</button></div>' +
       '</div>';
     document.body.appendChild(ov);
     ov.querySelector('#sy-close').addEventListener('click', function(){ ov.remove(); });
-    var onBtn = ov.querySelector('#sy-on');
-    if (onBtn) onBtn.addEventListener('click', async function(){
-      var txt = ov.querySelector('#sy-cfg').value || '';
-      var m = txt.match(/\{[\s\S]*\}/);
-      if (!m){ toast('firebaseConfig の { } が見つかりません'); return; }
-      var parsed = null;
-      try { parsed = (new Function('return (' + m[0] + ')'))(); } catch(e){ toast('設定を読み取れませんでした'); return; }
-      if (!parsed || !parsed.apiKey || !parsed.projectId){ toast('apiKey / projectId が見つかりません'); return; }
-      var existing = readCfg();
-      var rid = (existing && existing.bandId) ? existing.bandId : (function(n){ var a='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',s=''; for(var i=0;i<n;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; })(28);
-      localStorage.setItem('tp-cfg', JSON.stringify({ fb: parsed, bandId: rid }));
-      ov.remove();
-      toast('共有をONにしました。今の内容を全員へ共有します…', '#27E6A5');
-      FB = null;
-      await publish();
-      boot();
-    });
-    var offBtn = ov.querySelector('#sy-off');
-    if (offBtn) offBtn.addEventListener('click', function(){
-      localStorage.removeItem('tp-cfg'); FB = null; ov.remove();
-      toast('共有を解除しました(このスマホのみ)');
-    });
-    var invBtn = ov.querySelector('#sy-invite');
-    if (invBtn) invBtn.addEventListener('click', function(){
+    ov.querySelector('#sy-invite').addEventListener('click', function(){
       var c = readCfg(); if (!c) return;
       var payload = btoa(unescape(encodeURIComponent(JSON.stringify({ c:c.fb, b:c.bandId })))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-      var url = location.href.split('#')[0] + '#site-join=' + payload;
+      var url = location.href.split('#')[0] + '#join=' + payload;
       if (navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(url).then(function(){ toast('招待リンクをコピーしました', '#27E6A5'); }).catch(function(){ window.prompt('コピーして送ってください', url); });
       } else window.prompt('コピーして送ってください', url);
     });
   }
-
   // 外部(編集バー)から使えるよう公開
   window.tpSite = { publish: publish, openSyncSetup: openSyncSetup, isReady: function(){ return !!readCfg(); } };
 

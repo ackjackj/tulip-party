@@ -17236,12 +17236,14 @@ const CACHED = (() => { try {
 catch (e) {
     return null;
 } })();
+const TP_FIXED = { fb: {"apiKey": "AIzaSyATfDbH1lY99kj3UanVpLCcsXBcsCFMyX0", "authDomain": "tulip-party.firebaseapp.com", "projectId": "tulip-party", "storageBucket": "tulip-party.firebasestorage.app", "messagingSenderId": "957611196667", "appId": "1:957611196667:web:a9daa9204b0d770a42f05e"}, bandId: "ih4hFne3hoNEjEnCLGaQ1owA8gYm" };
 const CFG0 = (() => { try {
-    return JSON.parse(localStorage.getItem("tp-cfg") || "null");
+    const c = JSON.parse(localStorage.getItem("tp-cfg") || "null");
+    if (c && c.fb && c.bandId) return c;
 }
-catch (e) {
-    return null;
-} })();
+catch (e) {}
+    return TP_FIXED;
+})();
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36);
 const randId = (n) => {
     const a = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
