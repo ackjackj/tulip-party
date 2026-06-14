@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#070708">
@@ -1251,6 +1254,22 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') tryPass(); });
     ov.querySelector('#pw-no').addEventListener('click', function(){ ov.remove(); });
   }
+  var tpDirty = false;
+  function markDirty(){ tpDirty = true; updateDirtyUI(); }
+  function clearDirty(){ tpDirty = false; updateDirtyUI(); }
+  function updateDirtyUI(){
+    var bar = document.getElementById('editbar');
+    if (!bar) return;
+    var hint = bar.querySelector('span');
+    var pub = document.getElementById('eb-publish');
+    if (tpDirty){
+      if (hint) hint.innerHTML = '⚠️ 未保存の変更があります — 「全員に共有」を押してください';
+      if (pub) pub.style.boxShadow = '0 0 0 2px #27E6A5, 0 0 14px rgba(39,230,165,.7)';
+    } else {
+      if (hint) hint.textContent = '編集モード — 文字/写真を変更したら「全員に共有」';
+      if (pub) pub.style.boxShadow = '';
+    }
+  }
   function startEdit(){
     editing = true;
     document.body.classList.add('editing');
@@ -1258,6 +1277,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     if (!picker) setupPicker();
     addMovieTools();
     if (window.tpEnableMemberLinkEditing) window.tpEnableMemberLinkEditing();
+    // 変更を検知して「未保存」を表示
+    document.addEventListener('input', onEditInput, true);
     const bar = document.createElement('div');
     bar.id = 'editbar';
     bar.innerHTML = '<span>編集モード — 文字/写真を変更したら「全員に共有」</span><button id="eb-publish" type="button">全員に共有</button><button id="eb-save" type="button">バックアップ保存</button><button id="eb-sync" type="button">共有設定</button><button id="eb-app" type="button">管理アプリ</button><button id="eb-exit" type="button">終了</button>';
@@ -1271,7 +1292,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         var ok = false;
         try { ok = await window.tpSite.publish(); } catch(e){ ok = false; }
         btn.textContent = ok ? '✓ 共有しました' : '保存に失敗';
-        setTimeout(function(){ btn.textContent = orig; btn.disabled = false; }, 1800);
+        if (ok && typeof clearDirty === 'function') clearDirty();
+        setTimeout(function(){ btn.textContent = orig; btn.disabled = false; if (ok) updateDirtyUI(); }, 1800);
       } else if (window.tpSite){ window.tpSite.openSyncSetup(); }
     });
     document.getElementById('eb-sync').addEventListener('click', function(){ if (window.tpSite) window.tpSite.openSyncSetup(); });
@@ -1417,7 +1439,18 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     targetEi = im.getAttribute('data-ei');
     picker.click();
   }, true);
+  function onEditInput(e){
+    if (document.body.classList.contains('editing')) markDirty();
+  }
+  function beforeUnloadGuard(e){
+    if (tpDirty){ e.preventDefault(); e.returnValue = ''; return ''; }
+  }
+  window.addEventListener('beforeunload', beforeUnloadGuard);
   function endEdit(){
+    if (tpDirty){
+      if (!window.confirm('未保存の変更があります。「全員に共有」していない変更は失われます。編集を終了しますか?')) return;
+    }
+    document.removeEventListener('input', onEditInput, true);
     editing = false;
     document.body.classList.remove('editing');
     document.querySelectorAll(EDIT_SEL).forEach(function(el){ el.removeAttribute('contenteditable'); });
