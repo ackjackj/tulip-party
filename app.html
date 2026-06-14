@@ -26,7 +26,6 @@ input,textarea,button{font-family:inherit}
 <body>
 <div id="root"></div>
 <script>
-/* ---- mini CommonJS loader (React一式をファイル内に同梱) ---- */
 var __mods = {};
 function __def(name, fn) { __mods[name] = { fn: fn, exports: null }; }
 function require(name) {
@@ -17236,14 +17235,13 @@ const CACHED = (() => { try {
 catch (e) {
     return null;
 } })();
-const TP_FIXED = { fb: {"apiKey": "AIzaSyATfDbH1lY99kj3UanVpLCcsXBcsCFMyX0", "authDomain": "tulip-party.firebaseapp.com", "projectId": "tulip-party", "storageBucket": "tulip-party.firebasestorage.app", "messagingSenderId": "957611196667", "appId": "1:957611196667:web:a9daa9204b0d770a42f05e"}, bandId: "ih4hFne3hoNEjEnCLGaQ1owA8gYm" };
+const TP_FIXED = { fb: { "apiKey": "AIzaSyATfDbH1lY99kj3UanVpLCcsXBcsCFMyX0", "authDomain": "tulip-party.firebaseapp.com", "projectId": "tulip-party", "storageBucket": "tulip-party.firebasestorage.app", "messagingSenderId": "957611196667", "appId": "1:957611196667:web:a9daa9204b0d770a42f05e" }, bandId: "ih4hFne3hoNEjEnCLGaQ1owA8gYm" };
 const CFG0 = (() => { try {
     const c = JSON.parse(localStorage.getItem("tp-cfg") || "null");
-    if (c && c.fb && c.bandId) return c;
+    if (c && c.fb && c.bandId)
+        return c;
 }
-catch (e) {}
-    return TP_FIXED;
-})();
+catch (e) { } return TP_FIXED; })();
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36);
 const randId = (n) => {
     const a = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -17331,7 +17329,7 @@ function App() {
     const [sales, setSales] = useState(C.sales || []);
     const [ledger, setLedger] = useState(C.ledger || []);
     const [learnedItems, setLearnedItems] = useState(C.learnedItems || []);
-    const [studio, setStudio] = useState(C.studio || null);
+    const [studios, setStudios] = useState(C.studios || (C.studio ? [{ id: 's' + Date.now(), ...C.studio }] : []));
     const [studioHistory, setStudioHistory] = useState(C.studioHistory || []);
     const [studioMarks, setStudioMarks] = useState(C.studioMarks || {});
     const [stageItems, setStageItems] = useState(C.stageItems || INIT_STAGE);
@@ -17366,8 +17364,10 @@ function App() {
             setLedger(d.ledger);
         if (d.learnedItems)
             setLearnedItems(d.learnedItems);
-        if (d.studio !== undefined)
-            setStudio(d.studio);
+        if (d.studios)
+            setStudios(d.studios);
+        else if (d.studio)
+            setStudios([{ id: 's' + Date.now(), ...d.studio }]);
         if (d.studioHistory)
             setStudioHistory(d.studioHistory);
         if (d.studioMarks)
@@ -17421,7 +17421,7 @@ function App() {
     }, [syncCfg]);
     // ---- 保存（スマホ内 + 共有中ならクラウド） ----
     useEffect(() => {
-        const d = { bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studio, studioHistory, studioMarks, stageItems, stageNotes };
+        const d = { bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes };
         payloadRef.current = d;
         try {
             localStorage.setItem("tp-data", JSON.stringify(d));
@@ -17441,7 +17441,7 @@ function App() {
             f.fsM.setDoc(f.ref, { ...payloadRef.current, _client: CLIENT_ID, _ts: Date.now() }).catch(() => { });
         }, 600);
         return () => clearTimeout(saveTimer.current);
-    }, [bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studio, studioHistory, studioMarks, stageItems, stageNotes, syncReady]);
+    }, [bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, syncReady]);
     // ---- メンバーとステージ図の同期 ----
     useEffect(() => {
         setStageItems((prev) => {
@@ -17531,9 +17531,9 @@ function App() {
     return (React.createElement("div", { style: { minHeight: "100dvh", background: COL.ink, color: COL.text, fontFamily: "'Zen Kaku Gothic New','Archivo',system-ui,sans-serif" } },
         React.createElement("div", { style: { position: "fixed", inset: 0, background: "radial-gradient(60% 45% at 50% 0%, rgba(255,30,60,.14), transparent 70%), radial-gradient(50% 40% at 85% 100%, rgba(255,30,60,.05), transparent 70%)", pointerEvents: "none" } }),
         React.createElement("div", { style: { position: "relative", maxWidth: 560, margin: "0 auto", paddingTop: "calc(14px + env(safe-area-inset-top))", paddingBottom: "calc(120px + env(safe-area-inset-bottom))" } },
-            screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studio, tasks, setScreen, refresh }),
+            screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
             screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
-            screen === "studio" && React.createElement(StudioS, { members, setStudio, studio, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
+            screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
             screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash }),
             screen === "funds" && React.createElement(BandFunds, { ledger, setLedger, learnedItems, setLearnedItems }),
@@ -17551,7 +17551,8 @@ const H = ({ children }) => React.createElement("div", { style: { ...DISP, fontS
 const Row = ({ children, style }) => React.createElement("div", { style: { display: "flex", alignItems: "center", ...style } }, children);
 const RowB = ({ children, style }) => React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", ...style } }, children);
 // ===================== HOME =====================
-function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studio, tasks, setScreen, refresh }) {
+function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }) {
+    const nextStudio = (studios && studios.length) ? [...studios].sort((a, b) => (a.dateKey || '').localeCompare(b.dateKey || ''))[0] : null;
     const d = gig.date ? daysUntil(gig.date) : null;
     const pct = gig.quota > 0 ? Math.min(100, (sold / gig.quota) * 100) : 0;
     const nextTask = tasks.filter((t) => !t.done).sort((a, b) => new Date(a.due) - new Date(b.due))[0];
@@ -17606,9 +17607,11 @@ function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, need
                 "\u679A")),
         React.createElement(Card, { style: { marginTop: 12 } },
             React.createElement(Label, null, "\u30B9\u30BF\u30B8\u30AA"),
-            studio ? React.createElement("div", { style: { marginTop: 6 } },
-                React.createElement("div", { style: { fontWeight: 800, fontSize: 16 } }, studio.label),
-                React.createElement("div", { style: { fontSize: 12, color: COL.sub, marginTop: 2 } }, studio.place))
+            nextStudio ? React.createElement("div", { style: { marginTop: 6 } },
+                React.createElement("div", { style: { fontWeight: 800, fontSize: 16 } }, nextStudio.label),
+                React.createElement("div", { style: { fontSize: 12, color: COL.sub, marginTop: 2 } },
+                    nextStudio.place,
+                    studios.length > 1 ? `　他${studios.length - 1}件` : ""))
                 : React.createElement("div", { onClick: () => setScreen("studio"), style: { marginTop: 6, color: COL.amber, fontWeight: 700, cursor: "pointer" } }, "\u65E5\u7A0B\u8ABF\u6574\u4E2D \u2014 \u96C6\u8A08\u3092\u898B\u308B \u2192")),
         nextTask && (React.createElement(Card, { style: { marginTop: 12 } },
             React.createElement(Label, null, "\u6B21\u306E\u7DE0\u3081\u5207\u308A"),
@@ -17676,7 +17679,7 @@ function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, members, setMem
 }
 // ===================== STUDIO =====================
 function pad(n) { return String(n).padStart(2, "0"); }
-function StudioS({ members, setStudio, studio, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }) {
+function StudioS({ members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }) {
     const baseY = TODAY.getFullYear(), baseM = TODAY.getMonth();
     const [me, setMe] = useState(members[0] ? members[0].id : null);
     const [cur, setCur] = useState({ y: baseY, m: baseM });
@@ -17718,7 +17721,11 @@ function StudioS({ members, setStudio, studio, studioHistory, setStudioHistory, 
     const doConfirm = () => {
         const k = confirmFor;
         const lbl = `${parseInt(k.slice(5, 7))}/${parseInt(k.slice(8, 10))} (${WD[new Date(k).getDay()]}) ${startT}-${endT}`;
-        setStudio({ label: lbl, place: place.trim() || "場所未設定" });
+        const entry = { id: "st" + Date.now(), label: lbl, place: place.trim() || "場所未設定", dateKey: k };
+        setStudios((arr) => {
+            const filtered = (arr || []).filter((x) => x.dateKey !== k); // 同じ日は上書き
+            return [...filtered, entry].sort((a, b) => (a.dateKey || "").localeCompare(b.dateKey || ""));
+        });
         if (place.trim() && !studioHistory.includes(place.trim()))
             setStudioHistory((h) => [place.trim(), ...h].slice(0, 8));
         setConfirmFor(null);
@@ -17729,13 +17736,17 @@ function StudioS({ members, setStudio, studio, studioHistory, setStudioHistory, 
     return (React.createElement("div", { style: { padding: "6px 16px" } },
         React.createElement(H, null, "\u30B9\u30BF\u30B8\u30AA\u65E5\u7A0B\u8ABF\u6574"),
         React.createElement("div", { style: { fontSize: 12, color: COL.sub, margin: "6px 0 10px", lineHeight: 1.6 } }, "\u81EA\u5206\u306E\u540D\u524D\u3092\u9078\u3093\u3067\u3001\u8A18\u53F7\u3092\u9078\u3093\u3067\u3001\u7A7A\u3044\u3066\u308B\u65E5\u3092\u30BF\u30C3\u30D7\u3002\u5168\u54E1\u306E\u3007\u304C\u63C3\u3063\u305F\u65E5\u304C\u7DD1\u306B\u306A\u308A\u307E\u3059\u3002"),
-        studio && (React.createElement(Card, { style: { borderColor: COL.mint + "55", background: "rgba(39,230,165,.08)", marginBottom: 12 } },
-            React.createElement(RowB, null,
+        studios && studios.length > 0 && (React.createElement(Card, { style: { borderColor: COL.mint + "55", background: "rgba(39,230,165,.08)", marginBottom: 12 } },
+            React.createElement(Label, null,
+                "\u78BA\u5B9A\u6E08\u307F\u306E\u30B9\u30BF\u30B8\u30AA\uFF08",
+                studios.length,
+                "\u4EF6\uFF09"),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginTop: 8 } }, studios.map((st) => (React.createElement(RowB, { key: st.id, style: { background: COL.panel2, border: `1px solid ${COL.line}`, borderRadius: 10, padding: "10px 12px" } },
                 React.createElement("div", null,
-                    React.createElement(Label, null, "\u78BA\u5B9A\u6E08\u307F"),
-                    React.createElement("div", { style: { fontWeight: 800, fontSize: 16, marginTop: 2 } }, studio.label),
-                    React.createElement("div", { style: { fontSize: 12, color: COL.sub } }, studio.place)),
-                React.createElement("button", { onClick: () => { setStudio(null); flash("スタジオの予定を取り消しました"); }, style: { background: COL.panel2, border: `1px solid ${COL.accent}66`, color: COL.accent, borderRadius: 10, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer" } }, "\u53D6\u308A\u6D88\u3059")))),
+                    React.createElement("div", { style: { fontWeight: 800, fontSize: 15 } }, st.label),
+                    React.createElement("div", { style: { fontSize: 12, color: COL.sub, marginTop: 1 } }, st.place)),
+                React.createElement("button", { onClick: () => { setStudios((arr) => arr.filter((x) => x.id !== st.id)); flash("予定を取り消しました"); }, style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", flexShrink: 0, display: "flex" } },
+                    React.createElement(Ic, { name: "Trash2", size: 16 })))))))),
         React.createElement(Card, { style: { padding: 12, marginBottom: 10 } },
             React.createElement(Label, null, "\u5165\u529B\u3059\u308B\u4EBA\uFF08\u81EA\u5206\u3092\u9078\u629E\uFF09"),
             React.createElement(Row, { style: { gap: 6, marginTop: 8, flexWrap: "wrap" } }, members.map((m) => { const on = me === m.id; return React.createElement("button", { key: m.id, onClick: () => setMe(m.id), style: { background: on ? m.color : COL.panel2, color: on ? "#0a0a0a" : COL.sub, border: `1px solid ${on ? m.color : COL.line}`, borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer" } }, m.name); }))),
