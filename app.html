@@ -18187,11 +18187,23 @@ function MerchS({ products, setProducts, sales, setSales, merchRev, merchProfit,
         const rev = total;
         const cost = lines.reduce((s, l) => s + l.p.cost * l.q, 0);
         const m = METHODS.find(([k]) => k === method);
+        const items = lines.map((l) => ({ id: l.p.id, name: l.p.name, q: l.q }));
         setProducts((p) => p.map((x) => cart[x.id] ? { ...x, stock: Math.max(0, x.stock - cart[x.id]), sold: x.sold + cart[x.id] } : x));
-        setSales((s) => [...s, { rev, cost, method }]);
+        setSales((s) => [...s, { id: "sale" + Date.now(), rev, cost, method, items, time: Date.now() }]);
         setCart({});
         setPay(false);
         flash(`${yen(rev)}（${m ? m[1] : ""}）を記録しました`);
+    };
+    const deleteSale = (sale) => {
+        // 在庫と売上数を元に戻す
+        if (sale.items && sale.items.length) {
+            setProducts((p) => p.map((x) => {
+                const it = sale.items.find((i) => i.id === x.id);
+                return it ? { ...x, stock: x.stock + it.q, sold: Math.max(0, x.sold - it.q) } : x;
+            }));
+        }
+        setSales((s) => s.filter((x) => (x.id ? x.id !== sale.id : x !== sale)));
+        flash("売上記録を取り消しました");
     };
     if (pay) {
         return (React.createElement("div", { style: { padding: "6px 18px" } },
@@ -18271,6 +18283,31 @@ function MerchS({ products, setProducts, sales, setSales, merchRev, merchProfit,
             edit && React.createElement("button", { onClick: () => setProducts((p) => [...p, { id: "p" + Date.now(), name: "", price: 0, cost: 0, stock: 10, sold: 0 }]), style: { minHeight: 150, background: "transparent", border: `2px dashed ${COL.line}`, borderRadius: 16, color: COL.sub, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 800, fontFamily: "inherit" } },
                 React.createElement(Ic, { name: "Plus", size: 24 }),
                 "\u8FFD\u52A0")),
+        !edit && sales.length > 0 && (React.createElement("div", { style: { marginTop: 18, marginBottom: 90 } },
+            React.createElement(RowB, { style: { marginBottom: 8 } },
+                React.createElement(Label, null,
+                    "\u58F2\u4E0A\u306E\u8A18\u9332\uFF08",
+                    sales.length,
+                    "\u4EF6\uFF09"),
+                React.createElement("span", { style: { fontSize: 11, color: COL.sub } },
+                    "\u5408\u8A08 ",
+                    yen(merchRev))),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, [...sales].reverse().map((sale, i) => {
+                const m = [["cash", "現金"], ["paypay", "PayPay"], ["other", "その他"]].find(([k]) => k === sale.method);
+                const label = sale.items && sale.items.length ? sale.items.map((it) => `${it.name || "商品"}×${it.q}`).join("・") : "売上";
+                return (React.createElement(RowB, { key: sale.id || i, style: { background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 10, padding: "10px 12px" } },
+                    React.createElement("div", { style: { minWidth: 0, flex: 1 } },
+                        React.createElement("div", { style: { fontWeight: 700, fontSize: 14 } },
+                            yen(sale.rev),
+                            " ",
+                            React.createElement("span", { style: { fontSize: 11, color: COL.sub, fontWeight: 600 } },
+                                "\uFF08",
+                                m ? m[1] : "",
+                                "\uFF09")),
+                        React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, label)),
+                    React.createElement("button", { onClick: () => deleteSale(sale), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", flexShrink: 0, display: "flex", marginLeft: 8 } },
+                        React.createElement(Ic, { name: "Trash2", size: 16 }))));
+            })))),
         !edit && count > 0 && React.createElement("button", { onClick: () => { setMethod("cash"); setPay(true); }, className: "rise", style: { position: "fixed", left: 16, right: 16, margin: "0 auto", maxWidth: 528, bottom: "calc(86px + env(safe-area-inset-bottom))", height: 58, borderRadius: 16, border: "none", background: COL.accent, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 22px", boxShadow: "0 12px 30px rgba(255,30,60,.4)", zIndex: 25, fontFamily: "inherit" } },
             React.createElement("span", null,
                 "\u304A\u4F1A\u8A08 ",
