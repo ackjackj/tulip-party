@@ -1016,15 +1016,30 @@ introTl
   .to('.release-chip', { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.45')
   .from('#nav', { y: -30, opacity: 0, duration: 0.7, ease: 'power3.out' }, '-=0.6');
 
+function hideLoaderReduced(){
+  gsap.set('#loader', { display: 'none' });
+  gsap.set(['h1.title .ch', '.release-chip', '.hero-meta', '.hero-mark'], { clearProps: 'all', y: 0, opacity: 1, scale: 1 });
+}
 window.addEventListener('load', function(){
   if (reduced){
-    gsap.set('#loader', { display: 'none' });
-    gsap.set(['h1.title .ch', '.release-chip', '.hero-meta', '.hero-mark'], { clearProps: 'all', y: 0, opacity: 1, scale: 1 });
+    // reduced-motion でも同期完了(最大3.5秒)まで待ってからローダーを外す
+    if (window.tpSyncReady){ hideLoaderReduced(); }
+    else { window.addEventListener('tp-sync-ready', hideLoaderReduced, { once: true }); setTimeout(hideLoaderReduced, 3500); }
   } else {
-    introTl.play();
+    playWhenReady();
   }
 });
-setTimeout(function(){ if (!reduced && introTl.progress() === 0) introTl.play(); }, 2500);
+// 同期(Firestore)が終わってからイントロを終える→古い内容のチラ見せを防ぐ。
+// ただし最大3.5秒で必ず進める(回線が遅くても固まらない)。
+var _introStarted = false;
+function startIntro(){ if (_introStarted) return; _introStarted = true; if (!reduced && introTl.progress() === 0) introTl.play(); }
+function playWhenReady(){
+  if (window.tpSyncReady){ startIntro(); return; }
+  window.addEventListener('tp-sync-ready', startIntro, { once: true });
+  setTimeout(startIntro, 3500); // フェイルセーフ
+}
+// reduced-motion でも、load 後に同期待ちの保険
+setTimeout(function(){ if (!reduced) playWhenReady(); }, 2500);
 
 if (!reduced){
 
@@ -1248,9 +1263,16 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     bar.innerHTML = '<span>編集モード — 文字/写真を変更したら「全員に共有」</span><button id="eb-publish" type="button">全員に共有</button><button id="eb-save" type="button">バックアップ保存</button><button id="eb-sync" type="button">共有設定</button><button id="eb-app" type="button">管理アプリ</button><button id="eb-exit" type="button">終了</button>';
     document.body.appendChild(bar);
     document.getElementById('eb-save').addEventListener('click', saveFile);
-    document.getElementById('eb-publish').addEventListener('click', function(){
-      if (window.tpSite && window.tpSite.isReady()){ window.tpSite.publish(); }
-      else if (window.tpSite){ window.tpSite.openSyncSetup(); }
+    document.getElementById('eb-publish').addEventListener('click', async function(){
+      var btn = this;
+      if (window.tpSite && window.tpSite.isReady()){
+        var orig = btn.textContent;
+        btn.disabled = true; btn.textContent = '保存中…';
+        var ok = false;
+        try { ok = await window.tpSite.publish(); } catch(e){ ok = false; }
+        btn.textContent = ok ? '✓ 共有しました' : '保存に失敗';
+        setTimeout(function(){ btn.textContent = orig; btn.disabled = false; }, 1800);
+      } else if (window.tpSite){ window.tpSite.openSyncSetup(); }
     });
     document.getElementById('eb-sync').addEventListener('click', function(){ if (window.tpSite) window.tpSite.openSyncSetup(); });
     document.getElementById('eb-app').addEventListener('click', function(){ window.open('app.html', '_blank'); });
@@ -1755,7 +1777,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   /* ---- 起動: 設定があれば購読開始 ---- */
   async function boot(){
     var cfg = readCfg();
-    if (!cfg) return; // 同期未設定: 通常のサイトとして表示
+    if (!cfg){ window.tpSyncReady = true; try { window.dispatchEvent(new Event('tp-sync-ready')); } catch(e){} return; }
     try {
       await connect(cfg);
       // 大きな画像を含む可能性 → まず本体を取得して即時適用
@@ -1766,6 +1788,9 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         d.images = await loadImages();
         applyContent(d);
       }
+      // 最初の同期完了を通知(ローダーがこれを待つ→古い内容のチラ見せ防止)
+      window.tpSyncReady = true;
+      try { window.dispatchEvent(new Event('tp-sync-ready')); } catch(e){}
       // 以後リアルタイム購読(本文のみ。画像は保存時に更新通知で取りに行く)
       FB.fsM.onSnapshot(FB.docRef, async function(s){
         if (!s.exists()) return;
@@ -1784,6 +1809,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       } catch(e2){}
       ready = true;
     } catch(e){
+      window.tpSyncReady = true;
+      try { window.dispatchEvent(new Event('tp-sync-ready')); } catch(e2){}
       toast('共有の読み込みに失敗しました(通常表示にします)');
     }
   }
@@ -1890,6 +1917,28 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   }
 })();
 
+</script>
+<script>
+/* ローダー絶対フェイルセーフ(他のスクリプトが失敗しても必ず動く独立版) */
+(function(){
+  function killLoader(){
+    var l = document.getElementById('loader');
+    if (!l) return;
+    if (getComputedStyle(l).display === 'none') return;
+    l.style.transition = 'opacity .4s';
+    l.style.opacity = '0';
+    setTimeout(function(){ l.style.display = 'none'; }, 420);
+    // ヒーローの要素が隠れたままにならないように
+    try {
+      var sel = ['h1.title .ch', '.release-chip', '.hero-meta', '.hero-mark'];
+      sel.forEach(function(q){ document.querySelectorAll(q).forEach(function(el){ el.style.opacity='1'; el.style.transform='none'; }); });
+    } catch(e){}
+  }
+  // 同期完了で消す / 最大6秒で必ず消す(回線やCDN障害でも黒画面で固まらない)
+  if (window.tpSyncReady) { /* boot側のintroに任せる */ }
+  window.addEventListener('tp-sync-ready', function(){ setTimeout(killLoader, 1200); });
+  setTimeout(killLoader, 6000);
+})();
 </script>
 </body>
 </html>
