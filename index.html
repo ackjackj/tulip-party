@@ -1973,5 +1973,35 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   setTimeout(killLoader, 6000);
 })();
 </script>
+
+<!-- ===== 復元時オートリフレッシュ =====
+     Safari やホーム画面アプリは「閉じて開き直す」と前のページを“復元”するだけで
+     読み込み直さないため、古い内容が残ることがある。
+     復元された瞬間に最新へ読み込み直す。
+     ※編集中・ポップアップ表示中は絶対にリロードしない(編集内容を守るため)。 -->
+<script>
+(function(){
+  function safeToReload(){
+    if (document.body && document.body.classList.contains('editing')) return false; // 編集中は守る
+    if (document.querySelector('.pw-ov')) return false; // パスワード等のポップアップ中は触らない
+    return true;
+  }
+  // (1) 閉じて開き直し(bfcacheからの復元)
+  window.addEventListener('pageshow', function(e){
+    if (e.persisted && safeToReload()){ location.reload(); }
+  });
+  // (2) 長時間バックグラウンドからの復帰(ホーム画面アプリの再表示など)
+  var hiddenAt = 0;
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden'){
+      hiddenAt = Date.now();
+    } else if (document.visibilityState === 'visible'){
+      var awayMs = hiddenAt ? (Date.now() - hiddenAt) : 0;
+      if (awayMs > 30000 && safeToReload()){ location.reload(); } // 30秒以上離れたら最新化
+      hiddenAt = 0;
+    }
+  });
+})();
+</script>
 </body>
 </html>

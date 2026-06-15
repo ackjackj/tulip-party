@@ -18418,5 +18418,39 @@ function TasksS({ tasks, setTasks }) {
 ReactDOMClient.createRoot(document.getElementById("root")).render(React.createElement(App, null));
 
 </script>
+<!-- ===== 復元時オートリフレッシュ(運営アプリ版) =====
+     Safari/ホーム画面アプリを閉じて開き直すと前のページを“復元”するだけで
+     最新を取り直さないため、他メンバーの更新が古いまま見えることがある。
+     復元時に最新へ読み込み直す。データは端末内(localStorage)に常時保存済みなので
+     リロードしても入力内容は失われない。
+     ※入力中(キーボード表示中)は絶対にリロードしない。 -->
+<script>
+(function(){
+  function isTyping(){
+    var el = document.activeElement;
+    if (!el) return false;
+    var tag = (el.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    return false;
+  }
+  function safeToReload(){ return !isTyping(); }
+  // (1) 閉じて開き直し(bfcacheからの復元)
+  window.addEventListener('pageshow', function(e){
+    if (e.persisted && safeToReload()){ location.reload(); }
+  });
+  // (2) 長時間バックグラウンドからの復帰
+  var hiddenAt = 0;
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden'){
+      hiddenAt = Date.now();
+    } else if (document.visibilityState === 'visible'){
+      var awayMs = hiddenAt ? (Date.now() - hiddenAt) : 0;
+      if (awayMs > 60000 && safeToReload()){ location.reload(); } // 60秒以上離れたら最新化
+      hiddenAt = 0;
+    }
+  });
+})();
+</script>
 </body>
 </html>
