@@ -778,6 +778,7 @@ body.editing #nav{transform:none!important}
     <div class="foot">
       <span>© 2026 TULIP PARTY — YAMAGUCHI, JAPAN</span>
       <div class="sns">
+        <a href="https://www.instagram.com/tulip._.party" target="_blank" rel="noopener">INSTAGRAM</a>
         <a href="https://x.com/tulipparty1531" target="_blank" rel="noopener">X</a>
         <a href="https://youtube.com/channel/UCAaT5S7hQRTl8FoDAM4rAfg" target="_blank" rel="noopener">YOUTUBE</a>
         <a href="https://music.apple.com/jp/artist/tulip-party/1776440390" target="_blank" rel="noopener">APPLE MUSIC</a>
@@ -1817,9 +1818,10 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       var snap = await FB.fsM.getDoc(FB.docRef);
       if (snap.exists()){
         var d = snap.data();
-        // 画像は別コレクションから読む
+        applyContent(d);                 // まず文字(価格)とYouTubeを即時反映→古い表示のチラ見せ防止
+        // 画像は別コレクションから読む(やや時間がかかる)
         d.images = await loadImages();
-        applyContent(d);
+        applyContent(d);                 // 画像を反映
       }
       // 最初の同期完了を通知(ローダーがこれを待つ→古い内容のチラ見せ防止)
       window.tpSyncReady = true;
