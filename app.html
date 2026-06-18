@@ -17315,6 +17315,14 @@ function NumField({ value, onCommit, style, placeholder }) {
             onCommit(0);
         } }, style: { ...inp, ...style } }));
 }
+function PadSec({ value, onCommit, style }) {
+    const [t, setT] = useState(String(value == null ? 0 : value).padStart(2, "0"));
+    const ref = useRef(null);
+    useEffect(() => { if (ref.current && document.activeElement !== ref.current)
+        setT(String(value == null ? 0 : value).padStart(2, "0")); }, [value]);
+    return (React.createElement("input", { ref: ref, type: "text", inputMode: "numeric", value: t, onFocus: (e) => e.target.select(), onChange: (e) => { const v = e.target.value.replace(/\D/g, "").slice(-2); setT(v); const n = parseInt(v || "0"); if (!isNaN(n))
+        onCommit(Math.min(59, n)); }, onBlur: () => setT(String(Math.min(59, parseInt(t || "0") || 0)).padStart(2, "0")), style: { ...inp, ...style } }));
+}
 function App() {
     const [screen, setScreen] = useState("home");
     const [toast, setToast] = useState(null);
@@ -17330,6 +17338,7 @@ function App() {
     const [ledger, setLedger] = useState(C.ledger || []);
     const [learnedItems, setLearnedItems] = useState(C.learnedItems || []);
     const [studios, setStudios] = useState(C.studios || (C.studio ? [{ id: 's' + Date.now(), ...C.studio }] : []));
+    const [songLib, setSongLib] = useState(C.songLib || []);
     const [studioHistory, setStudioHistory] = useState(C.studioHistory || []);
     const [studioMarks, setStudioMarks] = useState(C.studioMarks || {});
     const [stageItems, setStageItems] = useState(C.stageItems || INIT_STAGE);
@@ -17372,6 +17381,8 @@ function App() {
             setStudioHistory(d.studioHistory);
         if (d.studioMarks)
             setStudioMarks(d.studioMarks);
+        if (d.songLib)
+            setSongLib(d.songLib);
         if (d.stageItems)
             setStageItems(d.stageItems);
         if (d.stageNotes)
@@ -17421,7 +17432,7 @@ function App() {
     }, [syncCfg]);
     // ---- 保存（スマホ内 + 共有中ならクラウド） ----
     useEffect(() => {
-        const d = { bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes };
+        const d = { bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
         payloadRef.current = d;
         try {
             localStorage.setItem("tp-data", JSON.stringify(d));
@@ -17441,7 +17452,7 @@ function App() {
             f.fsM.setDoc(f.ref, { ...payloadRef.current, _client: CLIENT_ID, _ts: Date.now() }).catch(() => { });
         }, 600);
         return () => clearTimeout(saveTimer.current);
-    }, [bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, syncReady]);
+    }, [bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
     // ---- メンバーとステージ図の同期 ----
     useEffect(() => {
         setStageItems((prev) => {
@@ -17534,7 +17545,7 @@ function App() {
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
             screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
-            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash }),
+            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash }),
             screen === "funds" && React.createElement(BandFunds, { ledger, setLedger, learnedItems, setLearnedItems }),
             screen === "tasks" && React.createElement(TasksS, { tasks, setTasks })),
@@ -17556,6 +17567,10 @@ function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, need
     const d = gig.date ? daysUntil(gig.date) : null;
     const pct = gig.quota > 0 ? Math.min(100, (sold / gig.quota) * 100) : 0;
     const nextTask = tasks.filter((t) => !t.done).sort((a, b) => new Date(a.due) - new Date(b.due))[0];
+    const undoneTasks = tasks.filter((t) => !t.done).sort((a, b) => new Date(a.due) - new Date(b.due));
+    const todayKey = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, "0")}-${String(TODAY.getDate()).padStart(2, "0")}`;
+    const upStudios = (studios || []).slice().filter((s) => (s.dateKey || "") >= todayKey).sort((a, b) => (a.dateKey || "").localeCompare(b.dateKey || ""));
+    const parseStudio = (st) => { const lb = (st && st.label) || ""; const m = lb.match(/^(.*?)[\s　]*(\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2})\s*$/); return { date: m ? m[1].trim() : lb, time: m ? m[2].replace(/\s/g, "") : "", place: (st && st.place) || "場所未設定" }; };
     return (React.createElement("div", { style: { padding: "6px 18px" } },
         React.createElement(RowB, null,
             React.createElement("div", null,
@@ -17606,18 +17621,27 @@ function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, need
                 breakEvenMore,
                 "\u679A")),
         React.createElement(Card, { style: { marginTop: 12 } },
-            React.createElement(Label, null, "\u30B9\u30BF\u30B8\u30AA"),
-            nextStudio ? React.createElement("div", { style: { marginTop: 6 } },
-                React.createElement("div", { style: { fontWeight: 800, fontSize: 16 } }, nextStudio.label),
-                React.createElement("div", { style: { fontSize: 12, color: COL.sub, marginTop: 2 } },
-                    nextStudio.place,
-                    studios.length > 1 ? `　他${studios.length - 1}件` : ""))
-                : React.createElement("div", { onClick: () => setScreen("studio"), style: { marginTop: 6, color: COL.amber, fontWeight: 700, cursor: "pointer" } }, "\u65E5\u7A0B\u8ABF\u6574\u4E2D \u2014 \u96C6\u8A08\u3092\u898B\u308B \u2192")),
-        nextTask && (React.createElement(Card, { style: { marginTop: 12 } },
-            React.createElement(Label, null, "\u6B21\u306E\u7DE0\u3081\u5207\u308A"),
-            React.createElement(RowB, { style: { marginTop: 6 } },
-                React.createElement("span", { style: { fontWeight: 700 } }, nextTask.title),
-                React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: daysUntil(nextTask.due) <= 5 ? COL.accent : COL.sub, flexShrink: 0, marginLeft: 10 } }, nextTask.due.slice(5).replace("-", "/"))))),
+            React.createElement(RowB, null,
+                React.createElement(Label, null, "スタジオ"),
+                React.createElement("button", { onClick: () => setScreen("studio"), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit" } }, "詳細 →")),
+            upStudios.length ? React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 9 } }, upStudios.map((st, idx) => {
+                const p = parseStudio(st);
+                const big = idx === 0;
+                return React.createElement("div", { key: st.id, style: { display: "flex", gap: 8, alignItems: "baseline" } },
+                    React.createElement("span", { style: { color: COL.mint, fontWeight: 800, flexShrink: 0, fontSize: big ? 16 : 13, lineHeight: 1.2 } }, "・"),
+                    React.createElement("div", { style: { minWidth: 0 } },
+                        React.createElement("div", { style: { fontWeight: 800, fontSize: big ? 18 : 13, color: COL.text, lineHeight: 1.25 } }, p.date, p.time ? React.createElement("span", { style: { color: COL.sub, fontWeight: 700, marginLeft: 8, fontSize: big ? 14 : 12 } }, p.time) : null),
+                        React.createElement("div", { style: { fontSize: big ? 13 : 11, color: COL.sub, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, p.place)));
+            }))
+                : React.createElement("div", { onClick: () => setScreen("studio"), style: { marginTop: 8, color: COL.amber, fontWeight: 700, cursor: "pointer" } }, "日程調整中 — 集計を見る →")),
+        React.createElement(Card, { style: { marginTop: 16 } },
+            React.createElement(RowB, null,
+                React.createElement(Label, null, "やること"),
+                React.createElement("button", { onClick: () => setScreen("tasks"), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit" } }, "すべて見る →")),
+            undoneTasks.length ? undoneTasks.slice(0, 4).map((t) => React.createElement(RowB, { key: t.id, style: { marginTop: 8 } },
+                React.createElement("span", { style: { fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 10 } }, t.title),
+                React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: (t.due && daysUntil(t.due) <= 5) ? COL.accent : COL.sub, flexShrink: 0 } }, t.due ? t.due.slice(5).replace("-", "/") : "")))
+                : React.createElement("div", { style: { marginTop: 8, fontSize: 13, color: COL.sub } }, "やることはありません 🎉")),
         siteUrl && (React.createElement("a", { href: siteUrl, target: "_blank", rel: "noopener noreferrer", className: "rise", style: { marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 52, borderRadius: 18, border: `1px solid ${COL.accent}66`, background: "rgba(255,30,60,.08)", color: COL.text, fontWeight: 800, fontSize: 14, textDecoration: "none" } },
             React.createElement(Ic, { name: "ExternalLink", size: 16, color: COL.accent }),
             "\u30AA\u30D5\u30A3\u30B7\u30E3\u30EB\u30B5\u30A4\u30C8\u3092\u958B\u304F"))));
@@ -17733,20 +17757,28 @@ function StudioS({ members, studios, setStudios, studioHistory, setStudioHistory
     };
     const brushColor = (b) => b === "〇" ? COL.mint : b === "△" ? COL.amber : b === "×" ? COL.accent : COL.sub;
     const meM = members.find((m) => m.id === me) || members[0];
+    const _ts = new Date(); const todayKeyS = `${_ts.getFullYear()}-${String(_ts.getMonth() + 1).padStart(2, "0")}-${String(_ts.getDate()).padStart(2, "0")}`;
+    const [showPastStudio, setShowPastStudio] = useState(false);
+    const upStudiosList = (studios || []).filter((s) => (s.dateKey || "") >= todayKeyS);
+    const pastStudiosList = (studios || []).filter((s) => (s.dateKey || "") < todayKeyS);
+    const renderStudioRow = (st) => (React.createElement(RowB, { key: st.id, style: { background: COL.panel2, border: `1px solid ${COL.line}`, borderRadius: 10, padding: "10px 12px" } },
+        React.createElement("div", null,
+            React.createElement("div", { style: { fontWeight: 800, fontSize: 15 } }, st.label),
+            React.createElement("div", { style: { fontSize: 12, color: COL.sub, marginTop: 1 } }, st.place)),
+        React.createElement("button", { onClick: () => { setStudios((arr) => arr.filter((x) => x.id !== st.id)); flash("予定を取り消しました"); }, style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", flexShrink: 0, display: "flex" } },
+            React.createElement(Ic, { name: "Trash2", size: 16 }))));
     return (React.createElement("div", { style: { padding: "6px 16px" } },
         React.createElement(H, null, "\u30B9\u30BF\u30B8\u30AA\u65E5\u7A0B\u8ABF\u6574"),
         React.createElement("div", { style: { fontSize: 12, color: COL.sub, margin: "6px 0 10px", lineHeight: 1.6 } }, "\u81EA\u5206\u306E\u540D\u524D\u3092\u9078\u3093\u3067\u3001\u8A18\u53F7\u3092\u9078\u3093\u3067\u3001\u7A7A\u3044\u3066\u308B\u65E5\u3092\u30BF\u30C3\u30D7\u3002\u5168\u54E1\u306E\u3007\u304C\u63C3\u3063\u305F\u65E5\u304C\u7DD1\u306B\u306A\u308A\u307E\u3059\u3002"),
         studios && studios.length > 0 && (React.createElement(Card, { style: { borderColor: COL.mint + "55", background: "rgba(39,230,165,.08)", marginBottom: 12 } },
-            React.createElement(Label, null,
-                "\u78BA\u5B9A\u6E08\u307F\u306E\u30B9\u30BF\u30B8\u30AA\uFF08",
-                studios.length,
-                "\u4EF6\uFF09"),
-            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginTop: 8 } }, studios.map((st) => (React.createElement(RowB, { key: st.id, style: { background: COL.panel2, border: `1px solid ${COL.line}`, borderRadius: 10, padding: "10px 12px" } },
-                React.createElement("div", null,
-                    React.createElement("div", { style: { fontWeight: 800, fontSize: 15 } }, st.label),
-                    React.createElement("div", { style: { fontSize: 12, color: COL.sub, marginTop: 1 } }, st.place)),
-                React.createElement("button", { onClick: () => { setStudios((arr) => arr.filter((x) => x.id !== st.id)); flash("予定を取り消しました"); }, style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", flexShrink: 0, display: "flex" } },
-                    React.createElement(Ic, { name: "Trash2", size: 16 })))))))),
+            React.createElement(Label, null, "確定済みのスタジオ（", upStudiosList.length, "件）"),
+            upStudiosList.length ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginTop: 8 } }, upStudiosList.map(renderStudioRow))
+                : React.createElement("div", { style: { fontSize: 12, color: COL.sub, marginTop: 8 } }, "これからの確定はありません。"),
+            pastStudiosList.length ? React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("button", { onClick: () => setShowPastStudio((v) => !v), style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "transparent", border: `1px solid ${COL.line}`, borderRadius: 10, padding: "8px 12px", color: COL.sub, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit" } },
+                    `終了 (${pastStudiosList.length})`,
+                    React.createElement(Ic, { name: "ChevronRight", size: 15, style: { transform: showPastStudio ? "rotate(90deg)" : "none", transition: "transform .15s" } })),
+                showPastStudio ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginTop: 8 } }, pastStudiosList.map(renderStudioRow)) : null) : null)),
         React.createElement(Card, { style: { padding: 12, marginBottom: 10 } },
             React.createElement(Label, null, "\u5165\u529B\u3059\u308B\u4EBA\uFF08\u81EA\u5206\u3092\u9078\u629E\uFF09"),
             React.createElement(Row, { style: { gap: 6, marginTop: 8, flexWrap: "wrap" } }, members.map((m) => { const on = me === m.id; return React.createElement("button", { key: m.id, onClick: () => setMe(m.id), style: { background: on ? m.color : COL.panel2, color: on ? "#0a0a0a" : COL.sub, border: `1px solid ${on ? m.color : COL.line}`, borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer" } }, m.name); }))),
@@ -17830,24 +17862,32 @@ function StudioS({ members, studios, setStudios, studioHistory, setStudioHistory
 // ===================== GIG =====================
 function GigS(props) {
     const [tab, setTab] = useState("money");
-    const tabs = [["money", "収支"], ["reserve", "取り置き"], ["setlist", "セトリ"], ["stage", "ステージ図"]];
+    const tabs = [["money", "収支"], ["reserve", "取り置き"], ["setlist", "セトリ"]];
+    const _tg = new Date(); const todayKeyG = `${_tg.getFullYear()}-${String(_tg.getMonth() + 1).padStart(2, "0")}-${String(_tg.getDate()).padStart(2, "0")}`;
+    const isPastGig = (g) => g.date && g.date < todayKeyG;
+    const upGigs = props.gigs.filter((g) => !isPastGig(g));
+    const pastGigs = props.gigs.filter(isPastGig);
+    const curGig0 = props.gigs.find((g) => g.id === props.currentGigId);
+    const [showPastGig, setShowPastGig] = useState(!!(curGig0 && isPastGig(curGig0)));
+    const gigChip = (g) => { const on = g.id === props.currentGigId; return (React.createElement("button", { key: g.id, onClick: () => props.setCurrentGigId(g.id), style: { flexShrink: 0, background: on ? COL.accent : COL.panel, border: `1px solid ${on ? COL.accent : COL.line}`, color: on ? "#fff" : COL.text, borderRadius: 12, padding: "8px 12px", cursor: "pointer", textAlign: "left" } },
+        React.createElement("div", { style: { fontWeight: 800, fontSize: 13 } }, g.date ? g.date.slice(5).replace("-", "/") : "日付未定"),
+        React.createElement("div", { style: { fontSize: 10, color: on ? "#ffffffcc" : COL.sub, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, g.venue))); };
     return (React.createElement("div", { style: { padding: "6px 16px" } },
         React.createElement(H, null, "\u30E9\u30A4\u30D6"),
         React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8, marginBottom: 12, overflowX: "auto", paddingBottom: 2 } },
-            props.gigs.map((g) => {
-                const on = g.id === props.currentGigId;
-                return (React.createElement("button", { key: g.id, onClick: () => props.setCurrentGigId(g.id), style: { flexShrink: 0, background: on ? COL.accent : COL.panel, border: `1px solid ${on ? COL.accent : COL.line}`, color: on ? "#fff" : COL.text, borderRadius: 12, padding: "8px 12px", cursor: "pointer", textAlign: "left" } },
-                    React.createElement("div", { style: { fontWeight: 800, fontSize: 13 } }, g.date ? g.date.slice(5).replace("-", "/") : "日付未定"),
-                    React.createElement("div", { style: { fontSize: 10, color: on ? "#ffffffcc" : COL.sub, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, g.venue)));
-            }),
+            upGigs.map(gigChip),
             React.createElement("button", { onClick: props.addGig, style: { flexShrink: 0, background: "transparent", border: `2px dashed ${COL.line}`, color: COL.sub, borderRadius: 12, padding: "0 14px", cursor: "pointer", fontWeight: 800, display: "flex", alignItems: "center", gap: 4 } },
                 React.createElement(Ic, { name: "Plus", size: 16 }),
                 "\u8FFD\u52A0")),
+        pastGigs.length ? React.createElement("div", { style: { marginBottom: 12 } },
+            React.createElement("button", { onClick: () => setShowPastGig((v) => !v), style: { display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${COL.line}`, borderRadius: 10, padding: "6px 12px", color: COL.sub, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit" } },
+                `終了したライブ (${pastGigs.length})`,
+                React.createElement(Ic, { name: "ChevronRight", size: 14, style: { transform: showPastGig ? "rotate(90deg)" : "none", transition: "transform .15s" } })),
+            showPastGig ? React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8, overflowX: "auto", paddingBottom: 2 } }, pastGigs.map(gigChip)) : null) : null,
         React.createElement("div", { style: { display: "flex", background: COL.panel, borderRadius: 12, padding: 4, gap: 3, marginBottom: 14 } }, tabs.map(([k, l]) => React.createElement("button", { key: k, onClick: () => setTab(k), style: { flex: 1, height: 38, borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, background: tab === k ? COL.accent : "transparent", color: tab === k ? "#fff" : COL.sub, fontFamily: "inherit" } }, l))),
         tab === "money" && React.createElement(Money, { ...props }),
         tab === "reserve" && React.createElement(Reserve, { ...props }),
-        tab === "setlist" && React.createElement(Setlist, { ...props }),
-        tab === "stage" && React.createElement(Stage, { ...props })));
+        tab === "setlist" && React.createElement(Setlist, { ...props })));
 }
 function Money({ gig, updateGig, deleteGig, gigs, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost }) {
     const set = (k, v) => updateGig({ [k]: v });
@@ -17949,15 +17989,18 @@ function Reserve({ reservations, setReservations }) {
                 React.createElement(Ic, { name: "Trash2", size: 16 }))))))));
 }
 // ---- SETLIST ----
-function Setlist({ setlist, setSetlist }) {
+function Setlist({ setlist, setSetlist, songLib = [], setSongLib }) {
     const [t, setT] = useState("");
     const [planMin, setPlanMin] = useState(30);
     const [dragId, setDragId] = useState(null);
     const [dy, setDy] = useState(0);
+    const [nTitle, setNTitle] = useState("");
+    const [nMin, setNMin] = useState(4);
+    const [nSec, setNSec] = useState(0);
     const drag = useRef(null);
     const ROW = 60;
     const total = setlist.reduce((s, x) => s + x.sec, 0);
-    const songCount = setlist.filter((x) => x.type !== "mc").length;
+    const songCount = setlist.filter((x) => x.type === "song").length;
     const diff = total - planMin * 60;
     const onDown = (e, id, idx) => { drag.current = { id, startY: e.clientY, startIdx: idx }; setDragId(id); setDy(0); e.currentTarget.setPointerCapture(e.pointerId); };
     const onMove = (e) => {
@@ -17982,49 +18025,83 @@ function Setlist({ setlist, setSetlist }) {
     const addSong = () => { if (!t.trim())
         return; setSetlist((p) => [...p, { id: "s" + Date.now(), type: "song", title: t.trim(), sec: 240 }]); setT(""); };
     const addMC = () => { setSetlist((p) => [...p, { id: "s" + Date.now(), type: "mc", title: t.trim() || "MC", sec: 60 }]); setT(""); };
+    const addEncore = () => { setSetlist((p) => [...p, { id: "s" + Date.now(), type: "encore", title: "ENCORE", sec: 0 }]); };
+    const addFromLib = (song) => setSetlist((p) => [...p, { id: "s" + Date.now() + Math.random().toString(36).slice(2, 5), type: "song", title: song.title, sec: song.sec }]);
+    const addToLib = () => { if (!nTitle.trim()) return; setSongLib && setSongLib((p) => [...p, { id: "sl" + Date.now(), title: nTitle.trim(), sec: nMin * 60 + Math.min(59, nSec) }]); setNTitle(""); setNMin(4); setNSec(0); };
+    const delFromLib = (id) => setSongLib && setSongLib((p) => p.filter((x) => x.id !== id));
     const tnum = { width: 34, height: 32, fontSize: 13, padding: "0 4px", textAlign: "center" };
-    let no = 0;
+    let no = 0, enNo = 0, inEncore = false;
     return (React.createElement(React.Fragment, null,
         React.createElement(Card, null,
             React.createElement(RowB, null,
                 React.createElement("div", null,
-                    React.createElement(Label, null, "\u6301\u3061\u6642\u9593"),
+                    React.createElement(Label, null, "持ち時間"),
                     React.createElement(Row, { style: { gap: 6, marginTop: 4 } },
                         React.createElement(NumField, { value: planMin, onCommit: setPlanMin, style: { width: 56, height: 36 } }),
-                        React.createElement("span", { style: { fontWeight: 700, color: COL.sub } }, "\u5206"))),
+                        React.createElement("span", { style: { fontWeight: 700, color: COL.sub } }, "分"))),
                 React.createElement("div", { style: { textAlign: "right" } },
-                    React.createElement("div", { style: { fontSize: 11, color: COL.sub, fontWeight: 700 } },
-                        songCount,
-                        "\u66F2 \u30FB \u5408\u8A08 ",
-                        mmss(total)),
-                    React.createElement("div", { style: { ...DISP, fontSize: 18, color: diff === 0 ? COL.mint : diff > 0 ? COL.accent : COL.amber } }, diff === 0 ? "ぴったり" : `${mmss(diff)} ${diff > 0 ? "超過" : "不足"}`))),
-            React.createElement("input", { value: t, onChange: (e) => setT(e.target.value), placeholder: "\u66F2\u540D / MC\u5185\u5BB9\u3092\u5165\u529B", style: { ...inp, marginTop: 12 } }),
-            React.createElement(Row, { style: { gap: 8, marginTop: 8 } },
-                React.createElement("button", { onClick: addSong, style: { flex: 1, height: 42, borderRadius: 10, border: "none", background: COL.accent, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "inherit" } },
-                    React.createElement(Ic, { name: "Plus", size: 16 }),
-                    "\u66F2\u3092\u8FFD\u52A0"),
-                React.createElement("button", { onClick: addMC, style: { flex: 1, height: 42, borderRadius: 10, border: `1px solid ${COL.line}`, background: COL.panel2, color: COL.text, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "inherit" } },
-                    React.createElement(Ic, { name: "Plus", size: 16 }),
-                    "MC\u30FB\u8EE2\u63DB")),
-            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 8 } }, "\u2261 \u3092\u63B4\u3093\u3067\u30C9\u30E9\u30C3\u30B0\u3067\u4E26\u3079\u66FF\u3048\u3002\u5404\u884C\u306E\u53F3\u3067 \u5206:\u79D2 \u3092\u5165\u529B\u3002")),
-        React.createElement("div", { style: { marginTop: 12, display: "flex", flexDirection: "column", gap: 8 } }, setlist.map((s, i) => {
-            const isMC = s.type === "mc";
-            if (!isMC)
-                no++;
-            const dg = dragId === s.id;
-            return (React.createElement(Row, { key: s.id, style: { background: dg ? COL.panel2 : (isMC ? "transparent" : COL.panel), border: `1px ${isMC ? "dashed" : "solid"} ${dg ? COL.accent : COL.line}`, borderRadius: 14, padding: "8px 10px", gap: 8, transform: dg ? `translateY(${dy}px) scale(1.02)` : "none", boxShadow: dg ? "0 12px 28px rgba(0,0,0,.5)" : "none", zIndex: dg ? 5 : 1, position: "relative", transition: dg ? "none" : "transform .15s" } },
-                React.createElement("button", { onPointerDown: (e) => onDown(e, s.id, i), onPointerMove: onMove, onPointerUp: onUp, style: { background: "none", border: "none", color: COL.sub, cursor: "grab", padding: 0, touchAction: "none", display: "flex" } },
-                    React.createElement(Ic, { name: "GripVertical", size: 18 })),
-                isMC ? React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: COL.amber, width: 22, textAlign: "center", flexShrink: 0 } }, "MC")
-                    : React.createElement("span", { style: { ...DISP, fontSize: 15, color: COL.accent, width: 22, textAlign: "center", flexShrink: 0 } }, no),
-                React.createElement("span", { style: { flex: 1, minWidth: 0, fontWeight: 700, color: isMC ? COL.sub : COL.text, fontStyle: isMC ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.title),
-                React.createElement(Row, { style: { gap: 2, flexShrink: 0 } },
-                    React.createElement(NumField, { value: Math.floor(s.sec / 60), onCommit: (v) => setSec(s.id, v * 60 + s.sec % 60), style: tnum }),
-                    React.createElement("span", { style: { color: COL.sub, fontWeight: 800 } }, ":"),
-                    React.createElement(NumField, { value: s.sec % 60, onCommit: (v) => setSec(s.id, Math.floor(s.sec / 60) * 60 + Math.min(59, v)), style: tnum })),
-                React.createElement("button", { onClick: () => setSetlist((p) => p.filter((x) => x.id !== s.id)), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", flexShrink: 0, display: "flex" } },
-                    React.createElement(Ic, { name: "Trash2", size: 15 }))));
-        }))));
+                    React.createElement("div", { style: { fontSize: 11, color: COL.sub, fontWeight: 700 } }, songCount, "曲 ・ 合計 ", mmss(total)),
+                    React.createElement("div", { style: { ...DISP, fontSize: 18, color: diff === 0 ? COL.mint : diff > 0 ? COL.accent : COL.amber } }, diff === 0 ? "ぴったり" : `${mmss(diff)} ${diff > 0 ? "超過" : "不足"}`)))),
+        React.createElement(Card, { style: { marginTop: 12 } },
+            React.createElement(RowB, null,
+                React.createElement(Label, null, "セットリスト"),
+                React.createElement("span", { style: { fontSize: 11, color: COL.sub, fontWeight: 700 } }, "≡ ドラッグで並べ替え")),
+            setlist.length ? React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 8 } }, setlist.map((s, i) => {
+                const isMC = s.type === "mc";
+                const isEnc = s.type === "encore";
+                const dg = dragId === s.id;
+                if (isEnc) {
+                    inEncore = true;
+                    return (React.createElement(Row, { key: s.id, style: { background: dg ? COL.panel2 : "rgba(169,140,255,.10)", border: `1px dashed ${dg ? COL.accent : COL.purple + "88"}`, borderRadius: 14, padding: "8px 10px", gap: 8, transform: dg ? `translateY(${dy}px) scale(1.02)` : "none", boxShadow: dg ? "0 12px 28px rgba(0,0,0,.5)" : "none", zIndex: dg ? 5 : 1, position: "relative", transition: dg ? "none" : "transform .15s" } },
+                        React.createElement("button", { onPointerDown: (e) => onDown(e, s.id, i), onPointerMove: onMove, onPointerUp: onUp, style: { background: "none", border: "none", color: COL.sub, cursor: "grab", padding: 0, touchAction: "none", display: "flex" } },
+                            React.createElement(Ic, { name: "GripVertical", size: 18 })),
+                        React.createElement("span", { style: { flex: 1, minWidth: 0, textAlign: "center", letterSpacing: 3, fontWeight: 800, fontSize: 12, color: COL.purple } }, "★ ENCORE ★"),
+                        React.createElement("button", { onClick: () => setSetlist((p) => p.filter((x) => x.id !== s.id)), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", flexShrink: 0, display: "flex" } },
+                            React.createElement(Ic, { name: "Trash2", size: 15 }))));
+                }
+                let label;
+                if (isMC) label = "MC";
+                else if (inEncore) { enNo++; label = "EN" + enNo; }
+                else { no++; label = String(no); }
+                return (React.createElement(Row, { key: s.id, style: { background: dg ? COL.panel2 : (isMC ? "transparent" : COL.panel), border: `1px ${isMC ? "dashed" : "solid"} ${dg ? COL.accent : COL.line}`, borderRadius: 14, padding: "8px 10px", gap: 8, transform: dg ? `translateY(${dy}px) scale(1.02)` : "none", boxShadow: dg ? "0 12px 28px rgba(0,0,0,.5)" : "none", zIndex: dg ? 5 : 1, position: "relative", transition: dg ? "none" : "transform .15s" } },
+                    React.createElement("button", { onPointerDown: (e) => onDown(e, s.id, i), onPointerMove: onMove, onPointerUp: onUp, style: { background: "none", border: "none", color: COL.sub, cursor: "grab", padding: 0, touchAction: "none", display: "flex" } },
+                        React.createElement(Ic, { name: "GripVertical", size: 18 })),
+                    isMC ? React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: COL.amber, width: 22, textAlign: "center", flexShrink: 0 } }, "MC")
+                        : React.createElement("span", { style: { ...DISP, fontSize: 15, color: inEncore ? COL.purple : COL.accent, width: 22, textAlign: "center", flexShrink: 0 } }, label),
+                    React.createElement("span", { style: { flex: 1, minWidth: 0, fontWeight: 700, color: isMC ? COL.sub : COL.text, fontStyle: isMC ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.title),
+                    React.createElement(Row, { style: { gap: 2, flexShrink: 0 } },
+                        React.createElement(NumField, { value: Math.floor(s.sec / 60), onCommit: (v) => setSec(s.id, v * 60 + s.sec % 60), style: tnum }),
+                        React.createElement("span", { style: { color: COL.sub, fontWeight: 800 } }, ":"),
+                        React.createElement(PadSec, { value: s.sec % 60, onCommit: (v) => setSec(s.id, Math.floor(s.sec / 60) * 60 + Math.min(59, v)), style: tnum })),
+                    React.createElement("button", { onClick: () => setSetlist((p) => p.filter((x) => x.id !== s.id)), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", flexShrink: 0, display: "flex" } },
+                        React.createElement(Ic, { name: "Trash2", size: 15 }))));
+            }))
+                : React.createElement("div", { style: { marginTop: 10, fontSize: 13, color: COL.sub, textAlign: "center", padding: "10px 0" } }, "下の持ち曲をタップ、またはMC・アンコールで追加"),
+            React.createElement(Row, { style: { gap: 8, marginTop: 10 } },
+                React.createElement("button", { onClick: addMC, style: { flex: 1, height: 40, borderRadius: 10, border: `1px solid ${COL.line}`, background: COL.panel2, color: COL.text, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "inherit" } },
+                    React.createElement(Ic, { name: "Plus", size: 15 }),
+                    "MC・転換"),
+                React.createElement("button", { onClick: addEncore, style: { flex: 1, height: 40, borderRadius: 10, border: `1px dashed ${COL.purple}88`, background: "rgba(169,140,255,.10)", color: COL.purple, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "inherit" } },
+                    React.createElement(Ic, { name: "Plus", size: 15 }),
+                    "アンコール"))),
+        React.createElement(Card, { style: { marginTop: 12 } },
+            React.createElement(RowB, null,
+                React.createElement(Label, null, "持ち曲"),
+                React.createElement("span", { style: { fontSize: 11, color: COL.sub, fontWeight: 700 } }, "タップでセトリに追加")),
+            songLib.length ? React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 } }, songLib.map((song) => React.createElement("div", { key: song.id, style: { display: "inline-flex", alignItems: "center", background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 999, overflow: "hidden" } },
+                React.createElement("button", { onClick: () => addFromLib(song), style: { display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: COL.text, cursor: "pointer", fontFamily: "inherit", padding: "7px 6px 7px 12px", fontWeight: 700, fontSize: 13 } },
+                    React.createElement(Ic, { name: "Plus", size: 14, color: COL.accent }),
+                    song.title,
+                    React.createElement("span", { style: { ...DISP, fontSize: 12, color: COL.sub, marginLeft: 2 } }, mmss(song.sec))),
+                React.createElement("button", { onClick: () => delFromLib(song.id), style: { background: "none", border: "none", borderLeft: `1px solid ${COL.line}`, color: COL.sub, cursor: "pointer", padding: "7px 9px", display: "flex", alignItems: "center" } },
+                    React.createElement(Ic, { name: "Trash2", size: 13 })))))
+                : React.createElement("div", { style: { marginTop: 8, fontSize: 12, color: COL.sub } }, "まだ持ち曲がありません。下で登録すると、ここにタップ追加できるボタンが並びます。"),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 12, alignItems: "center" } },
+                React.createElement("input", { value: nTitle, onChange: (e) => setNTitle(e.target.value), placeholder: "曲名を登録", style: { ...inp, flex: 1, marginTop: 0 } }),
+                React.createElement(NumField, { value: nMin, onCommit: setNMin, style: { width: 42, height: 38, textAlign: "center" } }),
+                React.createElement("span", { style: { color: COL.sub, fontWeight: 800 } }, ":"),
+                React.createElement(PadSec, { value: nSec, onCommit: setNSec, style: { width: 42, height: 38, textAlign: "center" } }),
+                React.createElement("button", { onClick: addToLib, style: { height: 38, padding: "0 14px", borderRadius: 10, border: "none", background: COL.mint, color: "#06281d", fontWeight: 800, cursor: "pointer", flexShrink: 0, fontFamily: "inherit" } }, "登録")))));
 }
 // ---- STAGE ----
 function Equip({ type, color }) {
@@ -18391,6 +18468,24 @@ function TasksS({ tasks, setTasks }) {
     const [t, setT] = useState("");
     const [due, setDue] = useState("");
     const sorted = [...tasks].sort((a, b) => a.done - b.done || new Date(a.due) - new Date(b.due));
+    const [showDone, setShowDone] = useState(false);
+    const _td = new Date(); const todayKeyT = `${_td.getFullYear()}-${String(_td.getMonth() + 1).padStart(2, "0")}-${String(_td.getDate()).padStart(2, "0")}`;
+    const isFin = (task) => task.done || (task.due && task.due < todayKeyT);
+    const active = sorted.filter((x) => !isFin(x));
+    const finished = sorted.filter(isFin);
+    const renderTask = (task) => {
+        const left = daysUntil(task.due);
+        return (React.createElement(Row, { key: task.id, style: { background: COL.panel, border: `1px solid ${task.done ? COL.line : (left <= 5 ? COL.accent + "66" : COL.line)}`, borderRadius: 14, padding: "12px", gap: 10 } },
+            React.createElement("button", { onClick: () => setTasks((p) => p.map((x) => x.id === task.id ? { ...x, done: !x.done } : x)), style: { width: 24, height: 24, borderRadius: 7, border: `2px solid ${task.done ? COL.mint : COL.line}`, background: task.done ? COL.mint : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, task.done && React.createElement(Ic, { name: "Check", size: 15, color: "#06281d" })),
+            React.createElement("div", { style: { flex: 1 } },
+                React.createElement("div", { style: { fontWeight: 700, textDecoration: task.done ? "line-through" : "none", opacity: task.done ? .5 : 1 } }, task.title),
+                React.createElement("div", { style: { fontSize: 11, color: task.done ? COL.sub : (left < 0 ? COL.accent : left <= 5 ? COL.amber : COL.sub), fontWeight: 700, marginTop: 2 } },
+                    task.due.slice(5).replace("-", "/"),
+                    " ",
+                    !task.done && (left < 0 ? `（${-left}日超過）` : left === 0 ? "（今日）" : `（あと${left}日）`))),
+            React.createElement("button", { onClick: () => setTasks((p) => p.filter((x) => x.id !== task.id)), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", display: "flex" } },
+                React.createElement(Ic, { name: "Trash2", size: 16 }))));
+    };
     return (React.createElement("div", { style: { padding: "6px 16px" } },
         React.createElement(H, null, "\u3084\u308B\u3053\u3068\u30FB\u7DE0\u3081\u5207\u308A"),
         React.createElement("div", { style: { fontSize: 12, color: COL.sub, margin: "6px 0 12px" } }, "\u300C\u3007\u65E5\u307E\u3067\u306B\u3053\u306E\u66F2\u3092\u4ED5\u4E0A\u3052\u308B\u300D\u3092\u30D0\u30F3\u30C9\u3067\u5171\u6709\u3002"),
@@ -18401,19 +18496,12 @@ function TasksS({ tasks, setTasks }) {
                 React.createElement("button", { onClick: () => { if (!t.trim() || !due)
                         return; setTasks((p) => [...p, { id: "t" + Date.now(), title: t.trim(), due, done: false }]); setT(""); setDue(""); }, style: { width: 48, height: 40, borderRadius: 10, border: "none", background: COL.accent, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" } },
                     React.createElement(Ic, { name: "Plus", size: 20 })))),
-        React.createElement("div", { style: { marginTop: 12, display: "flex", flexDirection: "column", gap: 8 } }, sorted.map((task) => {
-            const left = daysUntil(task.due);
-            return (React.createElement(Row, { key: task.id, style: { background: COL.panel, border: `1px solid ${task.done ? COL.line : (left <= 5 ? COL.accent + "66" : COL.line)}`, borderRadius: 14, padding: "12px", gap: 10 } },
-                React.createElement("button", { onClick: () => setTasks((p) => p.map((x) => x.id === task.id ? { ...x, done: !x.done } : x)), style: { width: 24, height: 24, borderRadius: 7, border: `2px solid ${task.done ? COL.mint : COL.line}`, background: task.done ? COL.mint : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, task.done && React.createElement(Ic, { name: "Check", size: 15, color: "#06281d" })),
-                React.createElement("div", { style: { flex: 1 } },
-                    React.createElement("div", { style: { fontWeight: 700, textDecoration: task.done ? "line-through" : "none", opacity: task.done ? .5 : 1 } }, task.title),
-                    React.createElement("div", { style: { fontSize: 11, color: task.done ? COL.sub : (left < 0 ? COL.accent : left <= 5 ? COL.amber : COL.sub), fontWeight: 700, marginTop: 2 } },
-                        task.due.slice(5).replace("-", "/"),
-                        " ",
-                        !task.done && (left < 0 ? `（${-left}日超過）` : left === 0 ? "（今日）" : `（あと${left}日）`))),
-                React.createElement("button", { onClick: () => setTasks((p) => p.filter((x) => x.id !== task.id)), style: { background: "none", border: "none", color: COL.sub, cursor: "pointer", display: "flex" } },
-                    React.createElement(Ic, { name: "Trash2", size: 16 }))));
-        }))));
+        React.createElement("div", { style: { marginTop: 12, display: "flex", flexDirection: "column", gap: 8 } }, active.map(renderTask)),
+        finished.length ? React.createElement("div", { style: { marginTop: 14 } },
+            React.createElement("button", { onClick: () => setShowDone((v) => !v), style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: COL.panel2, border: `1px solid ${COL.line}`, borderRadius: 12, padding: "10px 14px", color: COL.sub, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } },
+                `終了 (${finished.length})`,
+                React.createElement(Ic, { name: "ChevronRight", size: 16, style: { transform: showDone ? "rotate(90deg)" : "none", transition: "transform .15s" } })),
+            showDone ? React.createElement("div", { style: { marginTop: 8, display: "flex", flexDirection: "column", gap: 8 } }, finished.map(renderTask)) : null) : null));
 }
 ReactDOMClient.createRoot(document.getElementById("root")).render(React.createElement(App, null));
 
@@ -18451,6 +18539,14 @@ ReactDOMClient.createRoot(document.getElementById("root")).render(React.createEl
     }
   });
 })();
+</script>
+<script>
+/* キャッシュ番人(Service Worker)を登録 — 常に最新を取りに行く */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
 </script>
 </body>
 </html>
