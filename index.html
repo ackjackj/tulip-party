@@ -543,6 +543,38 @@ body.editing #nav{transform:none!important}
   #band .cap{opacity:0}
   #band .cap.last{opacity:1}
 }
+/* ===== NEWS ===== */
+#news{padding:64px 0}
+#news .wrap{max-width:760px;margin:0 auto;padding:0 22px}
+.news-h{font-family:'Unbounded','Zen Kaku Gothic New',sans-serif;font-weight:800;font-size:clamp(18px,4.6vw,26px);text-align:center;letter-spacing:2px;margin:0 0 16px}
+#news-list{display:flex;flex-direction:column}
+.news-item{display:flex;align-items:center;gap:8px;border-top:1px solid rgba(255,255,255,.14)}
+.news-item:last-child{border-bottom:1px solid rgba(255,255,255,.14)}
+.news-open{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;align-items:flex-start;background:none;border:none;color:inherit;text-align:left;cursor:pointer;padding:13px 4px;font-family:inherit}
+.news-date{font-size:11px;color:var(--txt2,#9aa3ad);font-weight:700;letter-spacing:1px}
+.news-title{font-size:15px;font-weight:700;line-height:1.55;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.news-open:hover .news-title{color:var(--red,#ff1e3c)}
+.news-tools{display:flex;gap:6px;flex-shrink:0}
+.news-tools button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:var(--txt2,#9aa3ad);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.news-tools .news-del{color:var(--red,#ff1e3c)}
+#news-add{display:none;margin:24px auto 0;background:transparent;border:2px dashed rgba(255,255,255,.25);color:var(--txt2,#9aa3ad);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+body.editing #news-add{display:block}
+.news-empty{color:var(--txt2,#9aa3ad);font-size:14px;padding:14px 4px;text-align:center}
+.news-ov{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.82);overflow-y:auto;display:flex;justify-content:center;padding:40px 16px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.news-page{position:relative;width:100%;max-width:640px;height:max-content;background:#0d0d0f;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:50px 22px 34px}
+.news-x{position:absolute;top:12px;right:14px;background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:15px;cursor:pointer}
+.news-hero{width:100%;border-radius:12px;margin-bottom:18px;display:block}
+.news-date2{font-size:13px;color:var(--txt2,#9aa3ad);font-weight:700;letter-spacing:1px;margin-bottom:6px}
+.news-ttl2{font-size:22px;font-weight:800;line-height:1.4;margin:0 0 16px}
+.news-body{font-size:15px;line-height:1.9;color:#e8e8ea}
+.news-lbl{display:block;font-size:12px;color:var(--txt2,#9aa3ad);font-weight:700;margin:14px 0 5px}
+.news-in{width:100%;background:#161618;border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;box-sizing:border-box}
+textarea.news-in{resize:vertical;line-height:1.7}
+.news-photo-wrap{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.news-photo-prev{width:100%;border-radius:10px}
+.news-photo-btn{display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer}
+.news-edit-actions{margin-top:22px}
+.news-save{width:100%;background:var(--red,#ff1e3c);border:none;color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -598,11 +630,21 @@ body.editing #nav{transform:none!important}
   <div class="scroll-cue">SCROLL<i></i></div>
 </section>
 
+<!-- ============ NEWS ============ -->
+<section id="news">
+  <div class="wrap">
+    <h2 class="news-h">NEWS</h2>
+    <div id="news-list"></div>
+    <button type="button" id="news-add">＋ ニュースを追加</button>
+  </div>
+</section>
+
 <!-- ============ MARQUEE ============ -->
 <div id="marquee" aria-hidden="true">
   <div class="track" id="mq-track"></div>
   <div class="track t2" id="mq-track2"></div>
 </div>
+
 
 <!-- ============ BAND (photo scrollytelling) ============ -->
 <section id="band">
@@ -768,6 +810,145 @@ body.editing #nav{transform:none!important}
   </div>
 </section>
 
+<script>
+/* ============ NEWS（お知らせ） ============ */
+(function(){
+  "use strict";
+  window.tpNews = window.tpNews || [];
+  window.tpNewsImgs = window.tpNewsImgs || {};
+  var loadedImgs = {};
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  var WD3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function todayISO(){ var t = new Date(); return t.getFullYear() + '-' + pad2(t.getMonth()+1) + '-' + pad2(t.getDate()); }
+  function isoOnly(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : ''; }
+  function fmtNewsDate(d){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || ''); if (!m) return esc(d || ''); var wd = WD3[new Date(+m[1], +m[2]-1, +m[3]).getDay()]; return m[1] + '.' + m[2] + '.' + m[3] + ' ' + wd; }
+  function isEditing(){ return document.body.classList.contains('editing'); }
+  function imgFor(id){ return window.tpNewsImgs[id] || loadedImgs['news-' + id] || ''; }
+  function dirty(){ if (window.tpMarkDirty) try { window.tpMarkDirty(); } catch(e){} }
+  function closeOv(){ var o = document.querySelector('.news-ov'); if (o) o.remove(); }
+
+  window.tpRenderNews = function(list, images){
+    if (Array.isArray(list)) window.tpNews = list.slice();
+    if (images) loadedImgs = images;
+    var box = document.getElementById('news-list');
+    if (!box) return;
+    box.innerHTML = '';
+    var arr = window.tpNews.slice();
+    if (!arr.length){
+      var em = document.createElement('div');
+      em.className = 'news-empty';
+      em.textContent = isEditing() ? '「＋ ニュースを追加」から作成できます。' : '準備中';
+      box.appendChild(em);
+    }
+    arr.forEach(function(n){
+      var row = document.createElement('div');
+      row.className = 'news-item';
+      row.innerHTML =
+        '<button type="button" class="news-open">' +
+          '<span class="news-date">' + fmtNewsDate(n.date) + '</span>' +
+          '<span class="news-title">' + esc(n.title) + '</span>' +
+        '</button>' +
+        (isEditing() ? '<span class="news-tools"><button type="button" class="news-edit">編集</button><button type="button" class="news-del">削除</button></span>' : '');
+      row.querySelector('.news-open').addEventListener('click', function(){ openDetail(n); });
+      if (isEditing()){
+        row.querySelector('.news-edit').addEventListener('click', function(){ openEdit(n); });
+        row.querySelector('.news-del').addEventListener('click', function(){
+          if (!window.confirm('このニュースを削除しますか?')) return;
+          window.tpNews = window.tpNews.filter(function(x){ return x.id !== n.id; });
+          delete window.tpNewsImgs[n.id];
+          window.tpRenderNews(); dirty();
+        });
+      }
+      box.appendChild(row);
+    });
+  };
+
+  window.tpCollectNews = function(){
+    return (window.tpNews || []).map(function(n){ return { id: n.id, date: n.date || '', title: n.title || '', body: n.body || '' }; });
+  };
+
+  function openDetail(n){
+    closeOv();
+    var ov = document.createElement('div');
+    ov.className = 'pw-ov news-ov';
+    var img = imgFor(n.id);
+    ov.innerHTML =
+      '<div class="news-page">' +
+        '<button type="button" class="news-x">\u2715</button>' +
+        (img ? '<img class="news-hero" src="' + img + '" alt="">' : '') +
+        '<div class="news-date2">' + fmtNewsDate(n.date) + '</div>' +
+        '<h3 class="news-ttl2">' + esc(n.title) + '</h3>' +
+        '<div class="news-body">' + esc(n.body).replace(/\n/g, '<br>') + '</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if (e.target === ov) closeOv(); });
+    ov.querySelector('.news-x').addEventListener('click', closeOv);
+  }
+
+  function openEdit(n){
+    closeOv();
+    var isNew = !n;
+    if (isNew) n = { id: 'n' + Date.now(), date: todayISO(), title: '', body: '' };
+    var ov = document.createElement('div');
+    ov.className = 'pw-ov news-ov';
+    var img = imgFor(n.id);
+    ov.innerHTML =
+      '<div class="news-page news-edit-page">' +
+        '<button type="button" class="news-x">\u2715</button>' +
+        '<label class="news-lbl">\u65E5\u4ED8</label>' +
+        '<input type="date" class="news-in" id="ne-date" value="' + isoOnly(n.date) + '">' +
+        '<label class="news-lbl">\u30BF\u30A4\u30C8\u30EB</label>' +
+        '<input type="text" class="news-in" id="ne-title" placeholder="\u898B\u51FA\u3057" value="' + esc(n.title) + '">' +
+        '<label class="news-lbl">\u672C\u6587</label>' +
+        '<textarea class="news-in" id="ne-body" rows="6" placeholder="\u672C\u6587"></textarea>' +
+        '<label class="news-lbl">\u5199\u771F</label>' +
+        '<div class="news-photo-wrap"><img class="news-photo-prev" id="ne-prev" src="' + img + '"' + (img ? '' : ' style="display:none"') + '><label class="news-photo-btn">\u5199\u771F\u3092\u9078\u3076<input type="file" accept="image/*" id="ne-file" hidden></label></div>' +
+        '<div class="news-edit-actions"><button type="button" class="news-save" id="ne-save">\u4FDD\u5B58</button></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#ne-body').value = (n.body || '');
+    ov.querySelector('.news-x').addEventListener('click', closeOv);
+    ov.querySelector('#ne-file').addEventListener('change', function(e){
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function(){ shrink(r.result, 1200, function(durl){ window.tpNewsImgs[n.id] = durl; var p = ov.querySelector('#ne-prev'); p.src = durl; p.style.display = ''; }); };
+      r.readAsDataURL(f);
+    });
+    ov.querySelector('#ne-save').addEventListener('click', function(){
+      n.date = ov.querySelector('#ne-date').value.trim();
+      n.title = ov.querySelector('#ne-title').value.trim();
+      n.body = ov.querySelector('#ne-body').value;
+      if (!n.date && !n.title && !n.body){ closeOv(); return; }
+      if (isNew) window.tpNews = [n].concat(window.tpNews || []);
+      else window.tpNews = window.tpNews.map(function(x){ return x.id === n.id ? n : x; });
+      window.tpRenderNews(); dirty(); closeOv();
+    });
+  }
+
+  function shrink(dataUrl, max, cb){
+    var im = new Image();
+    im.onload = function(){
+      var w = im.width, h = im.height;
+      if (w <= max && h <= max){ cb(dataUrl); return; }
+      var sc = Math.min(max / w, max / h);
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * sc); c.height = Math.round(h * sc);
+      try { c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL('image/jpeg', 0.85)); }
+      catch(e){ cb(dataUrl); }
+    };
+    im.onerror = function(){ cb(dataUrl); };
+    im.src = dataUrl;
+  }
+
+  function wireAdd(){ var a = document.getElementById('news-add'); if (a && !a._w){ a._w = 1; a.addEventListener('click', function(){ openEdit(null); }); } }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireAdd); else wireAdd();
+  try {
+    var lastEd = isEditing();
+    new MutationObserver(function(){ var e = isEditing(); if (e !== lastEd){ lastEd = e; window.tpRenderNews(); } }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  } catch(e){}
+})();
+</script>
 <!-- ============ CONTACT / FOOTER ============ -->
 <section id="contact">
   <div class="wrap">
@@ -1257,6 +1438,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   }
   var tpDirty = false;
   function markDirty(){ tpDirty = true; updateDirtyUI(); }
+  window.tpMarkDirty = markDirty;
   function clearDirty(){ tpDirty = false; updateDirtyUI(); }
   function updateDirtyUI(){
     var bar = document.getElementById('editbar');
@@ -1803,6 +1985,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       if (data.memberLinks && typeof data.memberLinks === 'object'){
         if (window.tpRenderMemberLinks) window.tpRenderMemberLinks(data.memberLinks);
       }
+      // 5) NEWS
+      if (window.tpRenderNews) window.tpRenderNews(Array.isArray(data.news) ? data.news : [], data.images || {});
       // リフロー系(ScrollTrigger)に変更を知らせる
       if (window.ScrollTrigger && window.ScrollTrigger.refresh){ try { window.ScrollTrigger.refresh(); } catch(e){} }
     } catch(e){ /* 適用失敗は無視(サイトは素のHTMLで表示) */ }
@@ -1887,7 +2071,9 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       if (src.indexOf('data:') === 0) images[k] = src;
     });
     var memberLinks = (window.tpCollectMemberLinks ? window.tpCollectMemberLinks() : {});
-    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks };
+    var news = (window.tpCollectNews ? window.tpCollectNews() : []);
+    if (window.tpNewsImgs) Object.keys(window.tpNewsImgs).forEach(function(k){ if (window.tpNewsImgs[k]) images['news-' + k] = window.tpNewsImgs[k]; });
+    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news };
   }
 
   /* ---- Firestore へ保存(全員に共有) ---- */
@@ -1909,6 +2095,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         texts: data.texts,
         movieList: data.movieList,
         memberLinks: data.memberLinks || {},
+        news: data.news || [],
         _client: CLIENT,
         _ts: Date.now()
       });
