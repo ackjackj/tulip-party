@@ -2005,5 +2005,13 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   });
 })();
 </script>
+<script>
+/* キャッシュ番人(Service Worker)を登録 — 常に最新を取りに行く */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>
