@@ -1788,43 +1788,67 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   }
 
   // window.tpApplyAppGig(gigsArray) — サイトのLIVE欄に反映
+  var LAST_GIGS = null;
   window.tpApplyAppGig = function(gigs){
+    LAST_GIGS = gigs;
     var pick = pickNext(gigs);
-    if (!pick) return;
-    var g = pick.g, f = pick.f;
-    var dateEl = document.querySelector('#live .gig-date');
-    var h3 = document.querySelector('#live .gig-hero h3');
-    var place = document.querySelector('#live .gig-hero .place');
-    if (dateEl){
-      var small = f.wd;
-      dateEl.innerHTML = f.y + '<b>.</b>' + f.m + '<b>.</b>' + f.d + '<small>' + small + '</small>';
+    if (pick){
+      var g = pick.g, f = pick.f;
+      var dateEl = document.querySelector('#live .gig-date');
+      var h3 = document.querySelector('#live .gig-hero h3');
+      var place = document.querySelector('#live .gig-hero .place');
+      if (dateEl){
+        var small = f.wd;
+        dateEl.innerHTML = f.y + '<b>.</b>' + f.m + '<b>.</b>' + f.d + '<small>' + small + '</small>';
+      }
+      if (h3){
+        h3.textContent = g.venue || g.eventTitle || 'LIVE';
+      }
+      if (place){
+        // 会場の補助情報: イベント名 / OPEN・START / チケット代
+        var bits = [];
+        if (g.eventTitle && g.eventTitle !== g.venue) bits.push(g.eventTitle);
+        var times = [];
+        if (g.openTime) times.push('OPEN ' + g.openTime);
+        if (g.startTime) times.push('START ' + g.startTime);
+        if (times.length) bits.push(times.join(' / '));
+        if (g.ticketPrice) bits.push('ADV ¥' + Number(g.ticketPrice).toLocaleString('ja-JP'));
+        place.innerHTML = bits.length ? bits.join('<br>') : (place.textContent || '');
+      }
     }
-    if (h3){
-      h3.textContent = g.venue || g.eventTitle || 'LIVE';
-    }
-    if (place){
-      // 会場の補助情報: イベント名 / OPEN・START / チケット代
-      var bits = [];
-      if (g.eventTitle && g.eventTitle !== g.venue) bits.push(g.eventTitle);
-      var times = [];
-      if (g.openTime) times.push('OPEN ' + g.openTime);
-      if (g.startTime) times.push('START ' + g.startTime);
-      if (times.length) bits.push(times.join(' / '));
-      if (g.ticketPrice) bits.push('ADV ¥' + Number(g.ticketPrice).toLocaleString('ja-JP'));
-      place.innerHTML = bits.length ? bits.join('<br>') : (place.textContent || '');
-    }
-    // ライブ詳細ビューにも反映(アプリ連動)
+    // ライブ詳細ビュー: 現在のURL(次回 or 特定ライブID)に応じて反映
+    fillDetailFromRoute();
+    if (window.ScrollTrigger && window.ScrollTrigger.refresh){ try { window.ScrollTrigger.refresh(); } catch(e){} }
+  };
+  // 詳細ビューの各項目を指定ライブで埋める
+  function fillDetailFields(g){
+    if (!g) return;
+    var f = fmtDate(g.date);
     var setApp = function(key, val){
       var el = document.querySelector('#live-detail [data-app="' + key + '"]');
       if (el && val != null && val !== '') el.textContent = val;
     };
-    setApp('date', f.y + '.' + f.m + '.' + f.d + (f.wd ? ' ' + f.wd : ''));
+    if (f) setApp('date', f.y + '.' + f.m + '.' + f.d + (f.wd ? ' ' + f.wd : ''));
     setApp('place', g.venue || g.eventTitle || '');
     setApp('open', g.openTime || '');
     setApp('start', g.startTime || '');
     if (g.ticketPrice) setApp('adv', '¥' + Number(g.ticketPrice).toLocaleString('ja-JP'));
-    if (window.ScrollTrigger && window.ScrollTrigger.refresh){ try { window.ScrollTrigger.refresh(); } catch(e){} }
+  }
+  // window.tpFillDetail(gigId) — gigId指定なら該当ライブ、null/未指定なら次回ライブ
+  window.tpFillDetail = function(gigId){
+    var gigs = LAST_GIGS;
+    if (!Array.isArray(gigs) || !gigs.length) return;
+    var g = null;
+    if (gigId){ for (var i = 0; i < gigs.length; i++){ if (gigs[i].id === gigId){ g = gigs[i]; break; } } }
+    if (!g){ var p = pickNext(gigs); g = p ? p.g : null; }
+    fillDetailFields(g);
   };
+  function fillDetailFromRoute(){
+    var h = location.hash || '';
+    if (h.indexOf('#live/') !== 0){ window.tpFillDetail(null); return; }
+    var rest = h.slice(6);
+    window.tpFillDetail((rest && rest !== 'detail') ? rest : null);
+  }
 })();
 
 </script>
@@ -2376,19 +2400,23 @@ if ('serviceWorker' in navigator) {
     document.documentElement.style.overflow = '';
     setTimeout(function(){ if (!panel.classList.contains('open')) panel.hidden = true; }, 320);
   }
+  function isLiveRoute(){ var h = location.hash || ''; return h.indexOf('#live/') === 0 && h.slice(6) !== ''; }
   function route(){
-    if (location.hash === ROUTE){ openPanel(); }
+    if (isLiveRoute()){
+      openPanel();
+      if (window.tpFillDetail){ var rest = location.hash.slice(6); window.tpFillDetail(rest === 'detail' ? null : rest); }
+    }
     else { closePanel(); }
   }
   window.addEventListener('hashchange', route);
 
   closeBtn.addEventListener('click', function(){
-    if (location.hash === ROUTE){ history.back(); }
+    if (isLiveRoute()){ history.back(); }
     else { closePanel(); }
   });
   // 背景タップでは閉じない(誤操作防止)。Escで閉じる。
   document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape' && location.hash === ROUTE){ history.back(); }
+    if (e.key === 'Escape' && isLiveRoute()){ history.back(); }
   });
 
   // 編集モードの切替時にフライヤー表示を更新
@@ -2432,7 +2460,7 @@ if ('serviceWorker' in navigator) {
   });
 
   // 初期ルーティング(直リンクで #live/detail を開いた場合に対応)
-  if (location.hash === ROUTE){ setTimeout(route, 0); }
+  if (isLiveRoute()){ setTimeout(route, 0); }
 })();
 </script>
 </body>

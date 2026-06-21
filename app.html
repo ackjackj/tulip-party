@@ -17563,7 +17563,7 @@ function App() {
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
             screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
-            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, acceptHp, dismissHp }),
+            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, acceptHp, dismissHp, siteUrl }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash }),
             screen === "funds" && React.createElement(BandFunds, { ledger, setLedger, learnedItems, setLearnedItems }),
             screen === "tasks" && React.createElement(TasksS, { tasks, setTasks })),
@@ -17980,13 +17980,25 @@ function Money({ gig, updateGig, deleteGig, gigs, sold, reserved, profit, needFo
             React.createElement("br", null),
             "\u7269\u8CA9\u306F\u300C\u7269\u8CA9\u300D\u30BF\u30D6\u306E\u58F2\u4E0A\u3068\u9023\u52D5\u3057\u307E\u3059\u3002")));
 }
-function Reserve({ reservations, setReservations, hpRes = [], acceptHp, dismissHp }) {
+function Reserve({ reservations, setReservations, hpRes = [], acceptHp, dismissHp, gig, siteUrl, flash }) {
     const [name, setName] = useState("");
     const [qty, setQty] = useState(1);
     const total = reservations.reduce((s, r) => s + r.qty, 0);
     const add = () => { if (!name.trim())
         return; setReservations((p) => [...p, { id: "r" + Date.now(), name: name.trim(), qty: qty || 1 }]); setName(""); setQty(1); };
+    const copyPromo = () => {
+        let base = (siteUrl || "").trim().replace(/#.*$/, "");
+        if (!base) { flash && flash("先に設定でサイトURLを入力してください"); return; }
+        const url = (base.endsWith(".html") || base.endsWith("/")) ? base + "#live/" + gig.id : base + "/#live/" + gig.id;
+        const ok = () => flash && flash("宣伝リンクをコピーしました（Xに貼れます）");
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(ok).catch(() => window.prompt("コピーして貼り付けてください", url));
+        } else { window.prompt("コピーして貼り付けてください", url); }
+    };
     return (React.createElement(React.Fragment, null,
+        React.createElement("button", { onClick: copyPromo, style: { width: "100%", height: 46, marginBottom: 12, borderRadius: 12, border: `1px solid ${COL.accent}`, background: COL.panel2, color: COL.accent, fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" } },
+            React.createElement(Ic, { name: "ExternalLink", size: 16 }),
+            "\u5BA3\u4F1D\u30EA\u30F3\u30AF\u3092\u30B3\u30D4\u30FC\uFF08X\u7528\uFF09"),
         React.createElement(Card, null,
             React.createElement(RowB, null,
                 React.createElement(Label, null, "\u53D6\u308A\u7F6E\u304D\u30C1\u30B1\u30C3\u30C8\u540D\u7C3F"),
