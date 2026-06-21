@@ -17343,6 +17343,7 @@ function App() {
     const [studioMarks, setStudioMarks] = useState(C.studioMarks || {});
     const [stageItems, setStageItems] = useState(C.stageItems || INIT_STAGE);
     const [stageNotes, setStageNotes] = useState(C.stageNotes || { m1: "", m2: "", m3: "", m4: "", m5: "", general: "" });
+    const [hpRes, setHpRes] = useState([]); // HP(公式サイト)からの取り置き予約
     const [syncCfg, setSyncCfg] = useState(CFG0);
     const [syncReady, setSyncReady] = useState(false);
     const fsRef = useRef(null);
@@ -17392,7 +17393,7 @@ function App() {
     useEffect(() => {
         if (!syncCfg)
             return;
-        let dead = false, unsub = null;
+        let dead = false, unsub = null, unsubRes = null;
         (async () => {
             try {
                 const appM = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
@@ -17400,7 +17401,7 @@ function App() {
                 const app = appM.initializeApp(syncCfg.fb, "tp-" + Date.now());
                 const db = fsM.getFirestore(app);
                 const ref = fsM.doc(db, "bands", syncCfg.bandId);
-                fsRef.current = { fsM, ref };
+                fsRef.current = { fsM, ref, db, bandId: syncCfg.bandId };
                 const snap = await fsM.getDoc(ref);
                 if (dead)
                     return;
@@ -17420,6 +17421,16 @@ function App() {
                     skipSave.current = true;
                     applyState(d);
                 });
+                // HP(公式サイト)からの取り置き予約を購読
+                try {
+                    const rcol = fsM.collection(db, "bands", syncCfg.bandId, "reservations");
+                    unsubRes = fsM.onSnapshot(rcol, (qs) => {
+                        const arr = [];
+                        qs.forEach((dd) => arr.push({ _docId: dd.id, ...dd.data() }));
+                        arr.sort((a, b) => (b._ts || 0) - (a._ts || 0));
+                        setHpRes(arr);
+                    });
+                } catch (e) { }
                 setSyncReady(true);
                 flash("メンバー共有: 接続しました");
             }
@@ -17428,7 +17439,8 @@ function App() {
             }
         })();
         return () => { dead = true; if (unsub)
-            unsub(); fsRef.current = null; setSyncReady(false); };
+            unsub(); if (unsubRes)
+            unsubRes(); fsRef.current = null; setSyncReady(false); };
     }, [syncCfg]);
     // ---- 保存（スマホ内 + 共有中ならクラウド） ----
     useEffect(() => {
@@ -17523,6 +17535,12 @@ function App() {
     const setlist = gig.setlist || [];
     const updateGig = (patch) => setGigs((p) => p.map((g) => g.id === gig.id ? { ...g, ...patch } : g));
     const setReservations = (u) => setGigs((p) => p.map((g) => g.id === gig.id ? { ...g, reservations: typeof u === "function" ? u(g.reservations || []) : u } : g));
+    const updateHpStatus = (docId, status) => { const f = fsRef.current; if (f && f.db && f.fsM && f.fsM.updateDoc) {
+        try { f.fsM.updateDoc(f.fsM.doc(f.db, "bands", f.bandId, "reservations", docId), { status }).catch(() => { }); }
+        catch (e) { } } };
+    const acceptHp = (r) => { setReservations((p) => p.some((x) => x.srcDoc === r._docId) ? p : [...p, { id: "h" + Date.now(), name: r.name || "(無名)", qty: r.qty || 1, fromHP: true, srcDoc: r._docId }]); updateHpStatus(r._docId, "accepted"); };
+    const dismissHp = (r) => { updateHpStatus(r._docId, "dismissed"); };
+    const hpResNew = hpRes.filter((r) => (r.status || "new") === "new");
     const setSetlist = (u) => setGigs((p) => p.map((g) => g.id === gig.id ? { ...g, setlist: typeof u === "function" ? u(g.setlist || []) : u } : g));
     const addGig = () => { const id = "g" + Date.now(); setGigs((p) => [...p, { id, venue: "新しいライブ", date: "", ticketPrice: 0, quota: 0, doorSold: 0, transport: 0, reservations: [], setlist: [] }]); setCurrentGigId(id); };
     const deleteGig = () => { if (gigs.length <= 1)
@@ -17545,7 +17563,7 @@ function App() {
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
             screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
-            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash }),
+            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, acceptHp, dismissHp }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash }),
             screen === "funds" && React.createElement(BandFunds, { ledger, setLedger, learnedItems, setLearnedItems }),
             screen === "tasks" && React.createElement(TasksS, { tasks, setTasks })),
@@ -17863,6 +17881,7 @@ function StudioS({ members, studios, setStudios, studioHistory, setStudioHistory
 function GigS(props) {
     const [tab, setTab] = useState("money");
     const tabs = [["money", "収支"], ["reserve", "取り置き"], ["setlist", "セトリ"]];
+    const hpCount = (props.hpRes || []).length;
     const _tg = new Date(); const todayKeyG = `${_tg.getFullYear()}-${String(_tg.getMonth() + 1).padStart(2, "0")}-${String(_tg.getDate()).padStart(2, "0")}`;
     const isPastGig = (g) => g.date && g.date < todayKeyG;
     const upGigs = props.gigs.filter((g) => !isPastGig(g));
@@ -17884,7 +17903,7 @@ function GigS(props) {
                 `終了したライブ (${pastGigs.length})`,
                 React.createElement(Ic, { name: "ChevronRight", size: 14, style: { transform: showPastGig ? "rotate(90deg)" : "none", transition: "transform .15s" } })),
             showPastGig ? React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8, overflowX: "auto", paddingBottom: 2 } }, pastGigs.map(gigChip)) : null) : null,
-        React.createElement("div", { style: { display: "flex", background: COL.panel, borderRadius: 12, padding: 4, gap: 3, marginBottom: 14 } }, tabs.map(([k, l]) => React.createElement("button", { key: k, onClick: () => setTab(k), style: { flex: 1, height: 38, borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, background: tab === k ? COL.accent : "transparent", color: tab === k ? "#fff" : COL.sub, fontFamily: "inherit" } }, l))),
+        React.createElement("div", { style: { display: "flex", background: COL.panel, borderRadius: 12, padding: 4, gap: 3, marginBottom: 14 } }, tabs.map(([k, l]) => React.createElement("button", { key: k, onClick: () => setTab(k), style: { flex: 1, height: 38, borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, background: tab === k ? COL.accent : "transparent", color: tab === k ? "#fff" : COL.sub, fontFamily: "inherit" } }, l, (k === "reserve" && hpCount > 0) ? React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 800, background: tab === k ? "#fff" : COL.accent, color: tab === k ? COL.accent : "#fff", borderRadius: 999, padding: "1px 6px", verticalAlign: "middle" } }, hpCount) : null))),
         tab === "money" && React.createElement(Money, { ...props }),
         tab === "reserve" && React.createElement(Reserve, { ...props }),
         tab === "setlist" && React.createElement(Setlist, { ...props })));
@@ -17961,7 +17980,7 @@ function Money({ gig, updateGig, deleteGig, gigs, sold, reserved, profit, needFo
             React.createElement("br", null),
             "\u7269\u8CA9\u306F\u300C\u7269\u8CA9\u300D\u30BF\u30D6\u306E\u58F2\u4E0A\u3068\u9023\u52D5\u3057\u307E\u3059\u3002")));
 }
-function Reserve({ reservations, setReservations }) {
+function Reserve({ reservations, setReservations, hpRes = [], acceptHp, dismissHp }) {
     const [name, setName] = useState("");
     const [qty, setQty] = useState(1);
     const total = reservations.reduce((s, r) => s + r.qty, 0);
@@ -17980,8 +17999,23 @@ function Reserve({ reservations, setReservations }) {
                 React.createElement(NumField, { value: qty, onCommit: setQty, style: { width: 60 } }),
                 React.createElement("button", { onClick: add, style: { width: 48, height: 40, borderRadius: 10, border: "none", background: COL.accent, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" } },
                     React.createElement(Ic, { name: "Plus", size: 20 })))),
+        hpRes.length ? React.createElement("div", { style: { marginTop: 12, padding: "12px 14px", borderRadius: 14, border: `1px solid ${COL.accent}66`, background: COL.panel2 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 } },
+                React.createElement("span", { style: { fontSize: 9, fontWeight: 800, color: "#fff", background: COL.accent, borderRadius: 6, padding: "2px 7px", letterSpacing: ".08em" } }, "HP"),
+                React.createElement("span", { style: { fontWeight: 800, fontSize: 13 } }, `サイトからの取り置き (${hpRes.length}件)`)),
+            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginBottom: 10, lineHeight: 1.6 } }, "\u300C\u8FFD\u52A0\u300D\u3067\u540D\u7C3F\u306B\u5165\u308A\u3001\u53CE\u652F\u306B\u3082\u53CD\u6620\u3055\u308C\u307E\u3059\u3002"),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, hpRes.map((r) => React.createElement("div", { key: r._docId, style: { display: "flex", alignItems: "center", gap: 8, background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 12, padding: "10px 12px" } },
+                React.createElement("span", { style: { fontSize: 8, fontWeight: 800, color: COL.accent, border: `1px solid ${COL.accent}`, borderRadius: 5, padding: "1px 5px", flexShrink: 0 } }, "NEW"),
+                React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                    React.createElement("div", { style: { fontWeight: 700, fontSize: 14 } }, r.name || "(\u7121\u540D)"),
+                    r.contact ? React.createElement("div", { style: { fontSize: 11, color: COL.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, r.contact) : null),
+                React.createElement("span", { style: { fontWeight: 800, fontSize: 13, flexShrink: 0 } }, `${r.qty || 1}\u679A`),
+                React.createElement("button", { onClick: () => acceptHp && acceptHp(r), style: { height: 34, padding: "0 10px", borderRadius: 9, border: "none", background: COL.accent, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, fontFamily: "inherit", flexShrink: 0 } },
+                    React.createElement(Ic, { name: "Check", size: 14 }), "\u8FFD\u52A0"),
+                React.createElement("button", { onClick: () => dismissHp && dismissHp(r), style: { height: 34, width: 34, borderRadius: 9, border: `1px solid ${COL.line}`, background: "transparent", color: COL.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } },
+                    React.createElement(Ic, { name: "X", size: 14 })))))) : null,
         React.createElement("div", { style: { marginTop: 12, display: "flex", flexDirection: "column", gap: 8 } }, reservations.map((r) => (React.createElement(RowB, { key: r.id, style: { background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 14, padding: "12px 14px" } },
-            React.createElement("span", { style: { fontWeight: 700, flex: 1 } }, r.name),
+            React.createElement("span", { style: { fontWeight: 700, flex: 1, display: "flex", alignItems: "center", gap: 6 } }, r.name, r.fromHP ? React.createElement("span", { style: { fontSize: 8, fontWeight: 800, color: "#fff", background: COL.accent, borderRadius: 5, padding: "1px 5px" } }, "HP") : null),
             React.createElement("span", { style: { fontWeight: 800, marginRight: 12 } },
                 r.qty,
                 "\u679A"),
