@@ -2177,6 +2177,12 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
 
   /* ===== ディスコグラフィ「LISTEN」等のリンク編集 ===== */
   (function(){
+    function normUrl(u){
+      u = (u || '').trim();
+      if (!u) return u;
+      if (/^(https?:\/\/|mailto:|tel:|#)/i.test(u)) return u;
+      return 'https://' + u.replace(/^\/+/, '');
+    }
     function allPlay(){ return Array.prototype.slice.call(document.querySelectorAll('a.play')); }
     function numberPlay(){ allPlay().forEach(function(a, i){ if (a.getAttribute('data-play') == null) a.setAttribute('data-play', String(i)); }); }
     window.tpApplyPlayLinks = function(map){
@@ -2184,13 +2190,13 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       if (!map || typeof map !== 'object') return;
       Object.keys(map).forEach(function(k){
         var a = document.querySelector('a.play[data-play="' + k + '"]');
-        if (a && map[k]) a.setAttribute('href', map[k]);
+        if (a && map[k]) a.setAttribute('href', normUrl(map[k]));
       });
     };
     window.tpCollectPlayLinks = function(){
       numberPlay();
       var out = {};
-      allPlay().forEach(function(a){ var k = a.getAttribute('data-play'); if (k != null) out[k] = a.getAttribute('href') || ''; });
+      allPlay().forEach(function(a){ var k = a.getAttribute('data-play'); if (k != null) out[k] = normUrl(a.getAttribute('href') || ''); });
       return out;
     };
     document.addEventListener('click', function(e){
@@ -2199,9 +2205,10 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       if (!a) return;
       e.preventDefault(); e.stopPropagation();
       var cur = a.getAttribute('href') || '';
-      var url = window.prompt('このボタンのリンク先URL（LISTEN等）', cur);
+      var url = window.prompt('このボタンのリンク先URL（https:// から入力）', cur);
       if (url == null) return;
-      a.setAttribute('href', url.trim());
+      url = normUrl(url);
+      a.setAttribute('href', url);
       if (window.tpMarkDirty) window.tpMarkDirty();
     }, true);
     function init(){ numberPlay(); }
