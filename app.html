@@ -17538,8 +17538,11 @@ function App() {
     const updateHpStatus = (docId, status) => { const f = fsRef.current; if (f && f.db && f.fsM && f.fsM.updateDoc) {
         try { f.fsM.updateDoc(f.fsM.doc(f.db, "bands", f.bandId, "reservations", docId), { status }).catch(() => { }); }
         catch (e) { } } };
-    const acceptHp = (r) => { setReservations((p) => p.some((x) => x.srcDoc === r._docId) ? p : [...p, { id: "h" + Date.now(), name: r.name || "(無名)", qty: r.qty || 1, fromHP: true, srcDoc: r._docId }]); updateHpStatus(r._docId, "accepted"); };
+    const acceptHp = (r) => { setReservations((p) => p.some((x) => x.srcDoc === r._docId) ? p : [...p, { id: "h" + Date.now(), name: r.name || "(無名)", qty: r.count || r.qty || 1, fromHP: true, srcDoc: r._docId }]); updateHpStatus(r._docId, "accepted"); };
     const dismissHp = (r) => { updateHpStatus(r._docId, "dismissed"); };
+    const deleteHpDoc = (docId) => { const f = fsRef.current; if (f && f.db && f.fsM && f.fsM.deleteDoc) {
+        try { f.fsM.deleteDoc(f.fsM.doc(f.db, "bands", f.bandId, "reservations", docId)).catch(() => { }); }
+        catch (e) { } } };
     const hpResNew = hpRes.filter((r) => (r.status || "new") === "new");
     const setSetlist = (u) => setGigs((p) => p.map((g) => g.id === gig.id ? { ...g, setlist: typeof u === "function" ? u(g.setlist || []) : u } : g));
     const addGig = () => { const id = "g" + Date.now(); setGigs((p) => [...p, { id, venue: "新しいライブ", date: "", ticketPrice: 0, quota: 0, doorSold: 0, transport: 0, reservations: [], setlist: [] }]); setCurrentGigId(id); };
@@ -17563,7 +17566,7 @@ function App() {
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
             screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
-            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, acceptHp, dismissHp, siteUrl }),
+            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, hpAll: hpRes, acceptHp, dismissHp, deleteHpDoc, siteUrl }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash }),
             screen === "funds" && React.createElement(BandFunds, { ledger, setLedger, learnedItems, setLearnedItems }),
             screen === "tasks" && React.createElement(TasksS, { tasks, setTasks })),
@@ -17980,10 +17983,87 @@ function Money({ gig, updateGig, deleteGig, gigs, sold, reserved, profit, needFo
             React.createElement("br", null),
             "\u7269\u8CA9\u306F\u300C\u7269\u8CA9\u300D\u30BF\u30D6\u306E\u58F2\u4E0A\u3068\u9023\u52D5\u3057\u307E\u3059\u3002")));
 }
-function Reserve({ reservations, setReservations, hpRes = [], acceptHp, dismissHp, gig, siteUrl, flash }) {
+function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], acceptHp, dismissHp, deleteHpDoc, gig, siteUrl, flash }) {
     const [name, setName] = useState("");
     const [qty, setQty] = useState(1);
+    const [custOpen, setCustOpen] = useState(false);
+    const [promoMsg, setPromoMsg] = useState("");
     const total = reservations.reduce((s, r) => s + r.qty, 0);
+    const custKey = (r) => ((r.contact || "").trim()) || ((r.name || "").trim()) || r._docId;
+    const custList = (() => {
+        const seen = {}; const list = [];
+        (hpAll || []).slice().sort((a, b) => (b._ts || 0) - (a._ts || 0)).forEach((r) => {
+            const key = custKey(r);
+            if (seen[key]) return; seen[key] = true;
+            list.push({ key, name: r.name, contact: r.contact, gigDate: r.gigDate });
+        });
+        return list;
+    })();
+    const promoLink = (() => {
+        let base = (siteUrl || "").trim().replace(/#.*$/, "");
+        if (!base) return "";
+        return (base.endsWith(".html") || base.endsWith("/")) ? base + "#live/" + gig.id : base + "/#live/" + gig.id;
+    })();
+    const liveBlock = (() => {
+        const dstr = (() => {
+            if (!gig.date) return "";
+            const d = new Date(gig.date + "T00:00:00");
+            if (isNaN(d.getTime())) return gig.date;
+            const w = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+            const p = (n) => String(n).padStart(2, "0");
+            return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())}(${w})`;
+        })();
+        const lines = ["🌷 TULIP PARTY LIVE 🌷"];
+        if (gig.eventTitle) lines.push(gig.eventTitle);
+        if (dstr) lines.push("📅 " + dstr);
+        if (gig.venue) lines.push("📍 " + gig.venue);
+        const t = [];
+        if (gig.openTime) t.push("OPEN " + gig.openTime);
+        if (gig.startTime) t.push("START " + gig.startTime);
+        if (t.length) lines.push("🕐 " + t.join(" / "));
+        if (gig.ticketPrice) lines.push("🎫 前売 ¥" + Number(gig.ticketPrice).toLocaleString("ja-JP"));
+        if (gig.acts) lines.push("w/ " + gig.acts);
+        return lines.join("\n");
+    })();
+    const fullMsg = () => {
+        const parts = [];
+        if (promoMsg.trim()) parts.push(promoMsg.trim());
+        if (liveBlock) parts.push(liveBlock);
+        if (promoLink) parts.push("▼取り置き・詳細はこちら\n" + promoLink);
+        return parts.join("\n\n");
+    };
+    const copyMessage = () => {
+        const text = fullMsg();
+        if (!text) { flash && flash("メッセージを入力してください"); return; }
+        const ok = () => flash && flash("宣伝メッセージをコピーしました");
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok).catch(() => window.prompt("コピーしてください", text));
+        else window.prompt("コピーしてください", text);
+    };
+    const sendTo = (c) => {
+        const text = fullMsg();
+        if (!text) { flash && flash("先に宣伝メッセージを入力してください"); return; }
+        const contact = (c.contact || "").trim();
+        const isEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact);
+        if (isEmail) {
+            window.location.href = "mailto:" + encodeURIComponent(contact) + "?subject=" + encodeURIComponent("TULIP PARTY ライブのお知らせ") + "&body=" + encodeURIComponent(text);
+        } else {
+            const handle = contact.replace(/^@/, "").replace(/^https?:\/\/(x|twitter)\.com\//i, "").split(/[/?]/)[0];
+            const copy = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.resolve();
+            copy.finally(() => { flash && flash("メッセージをコピー。XのDMで貼り付けて送ってください"); if (handle) window.open("https://x.com/" + handle, "_blank"); });
+        }
+    };
+    const deleteCustomer = (c) => {
+        if (!deleteHpDoc) return;
+        (hpAll || []).filter((r) => custKey(r) === c.key).forEach((r) => deleteHpDoc(r._docId));
+    };
+    const copyContacts = () => {
+        const lines = custList.filter((c) => c.contact).map((c) => `${c.name || ""} ${c.contact}`.trim());
+        if (!lines.length) { flash && flash("連絡先がありません"); return; }
+        const text = lines.join("\n");
+        const ok = () => flash && flash(`連絡先 ${lines.length}件をコピーしました`);
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok).catch(() => window.prompt("コピーしてください", text));
+        else window.prompt("コピーしてください", text);
+    };
     const add = () => { if (!name.trim())
         return; setReservations((p) => [...p, { id: "r" + Date.now(), name: name.trim(), qty: qty || 1 }]); setName(""); setQty(1); };
     const copyPromo = () => {
@@ -18021,11 +18101,31 @@ function Reserve({ reservations, setReservations, hpRes = [], acceptHp, dismissH
                 React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                     React.createElement("div", { style: { fontWeight: 700, fontSize: 14 } }, r.name || "(\u7121\u540D)"),
                     r.contact ? React.createElement("div", { style: { fontSize: 11, color: COL.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, r.contact) : null),
-                React.createElement("span", { style: { fontWeight: 800, fontSize: 13, flexShrink: 0 } }, `${r.qty || 1}\u679A`),
+                React.createElement("span", { style: { fontWeight: 800, fontSize: 13, flexShrink: 0 } }, `${r.count || r.qty || 1}\u679A`),
                 React.createElement("button", { onClick: () => acceptHp && acceptHp(r), style: { height: 34, padding: "0 10px", borderRadius: 9, border: "none", background: COL.accent, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, fontFamily: "inherit", flexShrink: 0 } },
                     React.createElement(Ic, { name: "Check", size: 14 }), "\u8FFD\u52A0"),
                 React.createElement("button", { onClick: () => dismissHp && dismissHp(r), style: { height: 34, width: 34, borderRadius: 9, border: `1px solid ${COL.line}`, background: "transparent", color: COL.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } },
                     React.createElement(Ic, { name: "X", size: 14 })))))) : null,
+        (hpAll && hpAll.length) ? React.createElement("div", { style: { marginTop: 14 } },
+            React.createElement("button", { onClick: () => setCustOpen((o) => !o), style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 12, padding: "12px 14px", color: COL.text, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 13 } },
+                React.createElement("span", null, `お客さんリスト（宣伝用）  ${custList.length}人`),
+                React.createElement("span", { style: { transform: custOpen ? "rotate(90deg)" : "none", transition: "transform .15s", display: "inline-flex" } }, React.createElement(Ic, { name: "ChevronRight", size: 18 }))),
+            custOpen ? React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement("div", { style: { padding: "12px 14px", borderRadius: 12, border: `1px solid ${COL.line}`, background: COL.panel, marginBottom: 12 } },
+                    React.createElement("div", { style: { fontWeight: 800, fontSize: 12, marginBottom: 2 } }, "宣伝メッセージ（集客用）"),
+                    React.createElement("div", { style: { fontSize: 10, color: COL.sub, marginBottom: 8, lineHeight: 1.6 } }, "上部に一言だけ書けばOK。ライブ詳細とリンクは自動で付きます。"),
+                    React.createElement("textarea", { value: promoMsg, onChange: (e) => setPromoMsg(e.target.value), placeholder: "例）遊びに来てね！チケット取り置き受付中です🌷", rows: 2, style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${COL.line}`, background: COL.ink, color: COL.text, fontFamily: "inherit", fontSize: 13, resize: "vertical" } }),
+                    React.createElement("div", { style: { fontSize: 10, color: COL.sub, margin: "8px 0 4px", fontWeight: 700 } }, "送信される全文（プレビュー）" + (promoLink ? "" : " ※設定でサイトURLを入れるとリンクが付きます")),
+                    React.createElement("div", { style: { fontSize: 12, color: COL.text, background: COL.ink, border: `1px solid ${COL.line}`, borderRadius: 8, padding: "10px 12px", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.6, maxHeight: 220, overflowY: "auto", margin: "0 0 10px" } }, fullMsg()),
+                    React.createElement("button", { onClick: copyMessage, style: { width: "100%", height: 42, borderRadius: 10, border: "none", background: COL.accent, color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 } }, React.createElement(Ic, { name: "ExternalLink", size: 14 }), "メッセージ全文をコピー")),
+                React.createElement("button", { onClick: copyContacts, style: { width: "100%", height: 38, marginBottom: 10, borderRadius: 10, border: `1px solid ${COL.line}`, background: "transparent", color: COL.sub, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" } }, "連絡先をまとめてコピー"),
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, custList.map((c) => React.createElement("div", { key: c.key, style: { display: "flex", alignItems: "center", gap: 8, background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 10, padding: "9px 12px" } },
+                    React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                        React.createElement("div", { style: { fontWeight: 700, fontSize: 13 } }, c.name || "(無名)"),
+                        c.contact ? React.createElement("div", { style: { fontSize: 11, color: COL.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, c.contact) : null,
+                        c.gigDate ? React.createElement("div", { style: { fontSize: 10, color: COL.sub } }, c.gigDate) : null),
+                    c.contact ? React.createElement("button", { onClick: () => sendTo(c), style: { height: 32, padding: "0 12px", borderRadius: 8, border: `1px solid ${COL.accent}`, background: "transparent", color: COL.accent, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 } }, "送る") : null,
+                    React.createElement("button", { onClick: () => deleteCustomer(c), style: { height: 32, width: 32, borderRadius: 8, border: `1px solid ${COL.line}`, background: "transparent", color: COL.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, React.createElement(Ic, { name: "Trash2", size: 14 })))))) : null) : null,
         React.createElement("div", { style: { marginTop: 12, display: "flex", flexDirection: "column", gap: 8 } }, reservations.map((r) => (React.createElement(RowB, { key: r.id, style: { background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 14, padding: "12px 14px" } },
             React.createElement("span", { style: { fontWeight: 700, flex: 1, display: "flex", alignItems: "center", gap: 6 } }, r.name, r.fromHP ? React.createElement("span", { style: { fontSize: 8, fontWeight: 800, color: "#fff", background: COL.accent, borderRadius: 5, padding: "1px 5px" } }, "HP") : null),
             React.createElement("span", { style: { fontWeight: 800, marginRight: 12 } },
