@@ -483,9 +483,12 @@ body.editing .ld-flyer{outline:2px dashed rgba(255,30,60,.55);outline-offset:2px
   margin-top:5px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
   color:var(--txt2);text-decoration:none;transition:color .25s;align-self:flex-start;
 }
-.face .mlinks{display:flex;flex-direction:column;gap:4px;margin-top:5px;align-self:flex-start;width:100%}
-.face .mlinks a{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--txt2);text-decoration:none;transition:color .25s}
+.face .mlinks{display:flex;flex-direction:row;flex-wrap:wrap;gap:14px;margin-top:9px;align-self:flex-start;width:100%;align-items:center}
+.face .mlinks a{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--txt2);text-decoration:none;transition:color .25s,opacity .25s}
+.face .mlinks a.ml-ic{color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.face .mlinks a.ml-ic svg{width:21px;height:21px;display:block}
 .face .mlinks a:hover{color:var(--red)}
+.face .mlinks a.ml-ic:hover{color:#fff;opacity:.55}
 .face .mlinks .ml-row{display:flex;align-items:center;gap:6px}
 .face .mlinks .ml-del{display:none;background:none;border:1px solid var(--line);color:var(--txt2);font-family:var(--mono);font-size:10px;border-radius:4px;padding:2px 6px;cursor:pointer}
 body.editing .face .mlinks .ml-del{display:inline-block}
@@ -1890,25 +1893,80 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   }
   function allMlinks(){ return Array.prototype.slice.call(document.querySelectorAll('.mlinks')); }
 
+  // 最後に読み込めたメンバーリンク(空上書き事故の防止に使用)
+  var LAST_MEMBER_LINKS = {};
+  // ---- URL からSNS種別を推定 ----
+  function detectType(href){
+    href = (href || '').toLowerCase();
+    if (href.indexOf('instagram') >= 0) return 'instagram';
+    if (href.indexOf('x.com') >= 0 || href.indexOf('twitter') >= 0) return 'x';
+    if (href.indexOf('youtube') >= 0 || href.indexOf('youtu.be') >= 0) return 'youtube';
+    if (href.indexOf('tiktok') >= 0) return 'tiktok';
+    return 'other';
+  }
+  // ---- 既存の(ハードコードされた)テキストリンクをアイコン化 ----
+  function iconizeExisting(box){
+    box.querySelectorAll('a[href]').forEach(function(a){
+      if (a.classList.contains('ml-ic')) return; // 既にアイコンなら何もしない
+      var type = a.getAttribute('data-lt') || detectType(a.getAttribute('href'));
+      var nm = labelFor(type);
+      a.className = 'ml-ic';
+      a.setAttribute('data-lt', type);
+      a.setAttribute('aria-label', nm);
+      a.title = nm;
+      a.innerHTML = iconFor(type);
+    });
+  }
+
   // ---- 描画: { mi: [ {type,url,label?} ] } ----
   window.tpRenderMemberLinks = function(map){
+    if (map && typeof map === 'object') LAST_MEMBER_LINKS = map;
     allMlinks().forEach(function(box){
-      var mi = box.getAttribute('data-mi');
-      var arr = (map && map[mi]) ? map[mi] : null;
-      if (!arr) return; // データが無いメンバーは既存DOMのまま
-      box.innerHTML = '';
-      arr.forEach(function(lnk){ box.appendChild(buildLink(lnk)); });
-      if (document.body.classList.contains('editing')) decorateEditing(box);
+      try {
+        var mi = box.getAttribute('data-mi');
+        var arr = (map && map[mi]) ? map[mi] : null;
+        if (!Array.isArray(arr) || !arr.length){ iconizeExisting(box); return; } // データが無いメンバーは既存リンクをアイコン化
+        box.innerHTML = '';
+        arr.forEach(function(lnk){ if (lnk && lnk.url) box.appendChild(buildLink(lnk)); });
+        if (document.body.classList.contains('editing')) decorateEditing(box);
+      } catch(e){ try { iconizeExisting(box); } catch(_){} }
     });
   };
+  // 初期表示時(Firestore読込前)にも既存リンクをアイコン化
+  (function(){
+    function initIcons(){ allMlinks().forEach(iconizeExisting); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initIcons);
+    else initIcons();
+  })();
+
+  function iconFor(type){
+    switch (type){
+      case 'instagram':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>';
+      case 'x':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.656l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>';
+      case 'youtube':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8.5l5.5 3.5-5.5 3.5z" fill="currentColor"/></svg>';
+      case 'tiktok':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 3c.32 2.13 1.6 3.63 3.7 3.92v2.52c-1.32.1-2.6-.31-3.7-1.03v5.96c0 3.4-2.6 5.63-5.66 5.63-3 0-5.34-2.4-5.34-5.3 0-3.1 2.6-5.43 5.7-5.2v2.6c-.4-.12-.8-.16-1.2-.13-1.3.1-2.18 1.1-2.1 2.5.06 1.36 1.1 2.34 2.4 2.27 1.32-.05 2.2-1.02 2.2-2.42V3h2.3z"/></svg>';
+      default:
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>';
+    }
+  }
 
   function buildLink(lnk){
+    var type = lnk.type;
+    if (!type || type === 'other') type = detectType(lnk.url);
     var a = document.createElement('a');
     a.href = lnk.url;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.setAttribute('data-lt', lnk.type || 'other');
-    a.textContent = (lnk.label || labelFor(lnk.type)) + ' \u2197';
+    a.className = 'ml-ic';
+    a.setAttribute('data-lt', type);
+    var nm = lnk.label || labelFor(type);
+    a.setAttribute('aria-label', nm);
+    a.title = nm;
+    a.innerHTML = iconFor(type);
     return a;
   }
 
@@ -1924,6 +1982,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         links.push({ type: a.getAttribute('data-lt') || 'other', url: url });
       });
       if (links.length) out[mi] = links;
+      else if (LAST_MEMBER_LINKS[mi] && LAST_MEMBER_LINKS[mi].length) out[mi] = LAST_MEMBER_LINKS[mi]; // 未描画/失敗時に空で上書きしない
     });
     return out;
   };
