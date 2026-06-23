@@ -2121,17 +2121,30 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   }
 
   /* ---- 受信した内容をページに適用 ---- */
-  // YouTube埋め込み(再生中iframe)をサムネ状態に戻す: 自動再生ゴースト対策
+  // YouTube埋め込み(再生中iframe)をサムネ状態に戻す + 迷子のiframeを除去: 自動再生ゴースト対策
   window.tpResetYtWraps = function(root){
     try {
-      (root || document).querySelectorAll('.yt-wrap[data-yt]').forEach(function(w){
+      var scope = root || document;
+      // 1) yt-wrap はサムネ＋▶に作り直す
+      scope.querySelectorAll('.yt-wrap[data-yt]').forEach(function(w){
         if (!w.querySelector('iframe')) return;
         var id = w.getAttribute('data-yt');
         if (!id) { w.innerHTML = ''; return; }
         w.innerHTML = '<img class="yt-thumb" src="https://i.ytimg.com/vi/' + id + '/hqdefault.jpg" alt="" loading="lazy" onerror="this.closest(\'.yt-wrap\').classList.add(\'no-thumb\')"><span class="yt-play" aria-hidden="true"><i></i></span>';
       });
+      // 2) MOVIES内に残った YouTube iframe は問答無用で除去(幽霊対策)
+      var ml = scope.querySelector ? (scope.id === 'movie-list' ? scope : scope.querySelector('#movie-list')) : null;
+      var box = ml || (scope.querySelector ? scope.querySelector('#movies') : null) || scope;
+      box.querySelectorAll && box.querySelectorAll('iframe').forEach(function(f){
+        var s = (f.getAttribute('src') || '') + (f.getAttribute('data-src') || '');
+        if (/youtube|youtu\.be|ytimg/i.test(s) || !f.closest('.yt-wrap')) f.remove();
+      });
     } catch(e){}
   };
+  (function(){
+    function run(){ if (window.tpResetYtWraps) window.tpResetYtWraps(document); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+  })();
 
   function applyContent(data){
     if (!data) return;
