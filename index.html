@@ -2620,5 +2620,93 @@ if ('serviceWorker' in navigator) {
   if (isLiveRoute()){ setTimeout(route, 0); }
 })();
 </script>
+<!-- ============ MOTION UI (progress / text-decode / micro-interactions) ============ -->
+<style>
+#tp-scrollbar{position:fixed;top:0;left:0;width:100%;height:3px;transform:scaleX(0);transform-origin:0 50%;background:linear-gradient(90deg,#c4122e,#ff1e3c 60%,#ff5470);box-shadow:0 0 12px rgba(255,30,60,.55);z-index:9999;pointer-events:none;will-change:transform}
+.sec-head h2,.news-h{will-change:contents}
+.tp-decoding{color:var(--red)!important;text-shadow:0 0 14px rgba(255,30,60,.45)}
+.tp-let{display:inline-block;transform:translateY(.6em) rotate(7deg);opacity:0;transition:transform .72s cubic-bezier(.2,.8,.2,1),opacity .72s}
+.tp-let-go .tp-let{transform:none;opacity:1}
+.tp-caret::after{content:"";display:inline-block;width:.1em;height:1em;background:var(--red);margin-left:.06em;vertical-align:-.1em;box-shadow:0 0 8px rgba(255,30,60,.7);animation:tpCaret .7s steps(1) infinite}
+@keyframes tpCaret{50%{opacity:0}}
+.tp-fx-glitch{animation:tpGlitch .5s steps(2,end) 2}
+@keyframes tpGlitch{0%{text-shadow:2px 0 #ff1e3c,-2px 0 #16e0ff;transform:translateX(0)}20%{text-shadow:-3px 0 #ff1e3c,3px 0 #16e0ff;transform:translateX(-3px)}40%{text-shadow:3px 0 #ff1e3c,-3px 0 #16e0ff;transform:translateX(3px)}60%{text-shadow:-2px 0 #ff1e3c,2px 0 #16e0ff;transform:translateX(-2px)}80%{text-shadow:1px 0 #ff1e3c,-1px 0 #16e0ff;transform:translateX(1px)}100%{text-shadow:none;transform:none}}
+.tp-fx-blur{animation:tpBlur 1.25s ease forwards}
+@keyframes tpBlur{from{filter:blur(13px);opacity:0;letter-spacing:.18em}to{filter:blur(0);opacity:1}}
+.tp-fx-wipe{animation:tpWipe 1.1s cubic-bezier(.7,0,.2,1) forwards}
+@keyframes tpWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.tp-fx-skew{animation:tpSkew 1s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes tpSkew{from{transform:translateX(-44px) skewX(15deg);opacity:0}to{transform:none;opacity:1}}
+.play,.yt-link,.release-chip{transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .28s ease,border-color .2s ease,color .2s ease}
+.play:active,.yt-link:active{transform:scale(.965)}
+.release-chip:active{transform:scale(.99)}
+.ml-ic{transition:transform .18s ease,opacity .2s ease}
+.ml-ic:active{transform:scale(.85)}
+@media (hover:hover){
+  .play:hover,.yt-link:hover{box-shadow:0 0 0 1px rgba(255,30,60,.55),0 10px 34px rgba(255,30,60,.18);color:#fff}
+  .release-chip:hover{box-shadow:0 14px 46px rgba(255,30,60,.22);transform:translateY(-2px)}
+  .face .mlinks a.ml-ic:hover{transform:translateY(-2px) scale(1.08);opacity:1}
+}
+@media (prefers-reduced-motion: reduce){
+  #tp-scrollbar{display:none}
+}
+</style>
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 1) スクロール進捗バー */
+  try{
+    var bar = document.createElement('div');
+    bar.id = 'tp-scrollbar'; bar.setAttribute('aria-hidden','true');
+    document.body.appendChild(bar);
+    var raf = 0;
+    function updBar(){
+      var h = document.documentElement;
+      var max = (h.scrollHeight - h.clientHeight) || 1;
+      var p = Math.min(1, Math.max(0, (window.scrollY || h.scrollTop || 0) / max));
+      bar.style.transform = 'scaleX(' + p + ')';
+      raf = 0;
+    }
+    function onScroll(){ if (!raf) raf = requestAnimationFrame(updBar); }
+    window.addEventListener('scroll', onScroll, {passive:true});
+    window.addEventListener('resize', onScroll);
+    updBar();
+  }catch(e){}
+
+  /* 2) 見出しごとに別々の入場モーション */
+  if (!reduce && 'IntersectionObserver' in window){
+    var GLYPHS = '▓▒░/<>*#%&@=+0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｱｲｳｴｵｶｷｸｹｺﾗﾘﾙﾚﾛ';
+    function finalOf(el){ var f = el.getAttribute('data-final'); if (f==null){ f = el.textContent; el.setAttribute('data-final', f); } return f; }
+    function fxDecode(el){
+      var txt = finalOf(el), chars = txt.split(''), start = performance.now(), dur = Math.min(1900, 520 + chars.length*95);
+      el.classList.add('tp-decoding');
+      (function frame(now){
+        var t = Math.min(1,(now-start)/dur), out='';
+        for (var i=0;i<chars.length;i++){ var c=chars[i]; out += (c===' ')?' ':((i<t*chars.length)?c:GLYPHS.charAt((Math.random()*GLYPHS.length)|0)); }
+        el.textContent = out;
+        if (t<1) requestAnimationFrame(frame); else { el.textContent = txt; el.classList.remove('tp-decoding'); }
+      })(performance.now());
+    }
+    function fxLetters(el){
+      var txt = finalOf(el); el.innerHTML='';
+      for (var i=0;i<txt.length;i++){ var s=document.createElement('span'); s.className='tp-let'; s.textContent = txt.charAt(i)===' ' ? '\u00A0' : txt.charAt(i); s.style.transitionDelay=(i*75)+'ms'; el.appendChild(s); }
+      void el.offsetWidth; el.classList.add('tp-let-go');
+    }
+    function fxType(el){
+      var txt = finalOf(el), i=0; el.textContent=''; el.classList.add('tp-caret');
+      (function step(){ el.textContent = txt.slice(0,i); i++; if (i<=txt.length) setTimeout(step,92); else setTimeout(function(){ el.classList.remove('tp-caret'); },600); })();
+    }
+    function fxClass(cls){ return function(el){ el.classList.add(cls); }; }
+    var FX = [fxDecode, fxLetters, fxClass('tp-fx-glitch'), fxClass('tp-fx-blur'), fxType, fxClass('tp-fx-wipe'), fxClass('tp-fx-skew')];
+    var heads = [].slice.call(document.querySelectorAll('.news-h, .sec-head h2'));
+    heads.forEach(function(el, idx){ el._tpfx = FX[idx % FX.length]; });
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if (en.isIntersecting){ try{ en.target._tpfx(en.target); }catch(e){} io.unobserve(en.target); } });
+    }, { threshold: 0, rootMargin: '0px 0px -26% 0px' });
+    heads.forEach(function(el){ io.observe(el); });
+  }
+})();
+</script>
 </body>
 </html>
