@@ -2121,6 +2121,18 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
   }
 
   /* ---- 受信した内容をページに適用 ---- */
+  // YouTube埋め込み(再生中iframe)をサムネ状態に戻す: 自動再生ゴースト対策
+  window.tpResetYtWraps = function(root){
+    try {
+      (root || document).querySelectorAll('.yt-wrap[data-yt]').forEach(function(w){
+        if (!w.querySelector('iframe')) return;
+        var id = w.getAttribute('data-yt');
+        if (!id) { w.innerHTML = ''; return; }
+        w.innerHTML = '<img class="yt-thumb" src="https://i.ytimg.com/vi/' + id + '/hqdefault.jpg" alt="" loading="lazy" onerror="this.closest(\'.yt-wrap\').classList.add(\'no-thumb\')"><span class="yt-play" aria-hidden="true"><i></i></span>';
+      });
+    } catch(e){}
+  };
+
   function applyContent(data){
     if (!data) return;
     try {
@@ -2132,6 +2144,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
           var pv0 = ml.querySelector('#playervid');
           if (pv0 && pv0.getAttribute('src')) pvSrc = pv0.getAttribute('src');
           ml.innerHTML = data.movieList;
+          if (window.tpResetYtWraps) window.tpResetYtWraps(ml); // 自動再生ゴースト除去
           var pv1 = ml.querySelector('#playervid');
           if (pv1 && pvSrc) pv1.setAttribute('src', pvSrc); // ローカルの動画ソースは保持
         }
@@ -2287,6 +2300,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       clone.querySelectorAll('.mv-tools').forEach(function(el){ el.remove(); });
       clone.querySelectorAll('[contenteditable]').forEach(function(el){ el.removeAttribute('contenteditable'); });
       clone.querySelectorAll('[style]').forEach(function(el){ el.removeAttribute('style'); });
+      if (window.tpResetYtWraps) window.tpResetYtWraps(clone); // 再生中iframeを保存しない
       movieList = clone.innerHTML;
     }
     // 変更写真: data-ei を持ち data URL になっているもの
