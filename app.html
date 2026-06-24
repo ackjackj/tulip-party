@@ -17329,6 +17329,8 @@ function App() {
     const C = CACHED || {};
     const [bandName, setBandName] = useState(C.bandName || "tulip party");
     const [siteUrl, setSiteUrl] = useState(C.siteUrl || "");
+    const [sendEmail, setSendEmail] = useState(C.sendEmail || ""); // メンバー共有の送信用アドレス
+    const [sentLog, setSentLog] = useState(C.sentLog || {}); // { [gigId]: { [contactKey]: ts } } 送信済み(ライブ別)
     const [members, setMembers] = useState(C.members || MEMBERS);
     const [gigs, setGigs] = useState(C.gigs && C.gigs.length ? C.gigs : INIT_GIGS);
     const [currentGigId, setCurrentGigId] = useState(C.currentGigId || (C.gigs && C.gigs[0] ? C.gigs[0].id : INIT_GIGS[0].id));
@@ -17358,6 +17360,10 @@ function App() {
             setBandName(d.bandName);
         if (d.siteUrl !== undefined)
             setSiteUrl(d.siteUrl);
+        if (d.sendEmail !== undefined)
+            setSendEmail(d.sendEmail);
+        if (d.sentLog !== undefined)
+            setSentLog(d.sentLog || {});
         if (d.members)
             setMembers(d.members);
         if (d.gigs && d.gigs.length) {
@@ -17444,7 +17450,7 @@ function App() {
     }, [syncCfg]);
     // ---- 保存（スマホ内 + 共有中ならクラウド） ----
     useEffect(() => {
-        const d = { bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
+        const d = { bandName, siteUrl, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
         payloadRef.current = d;
         try {
             localStorage.setItem("tp-data", JSON.stringify(d));
@@ -17464,7 +17470,7 @@ function App() {
             f.fsM.setDoc(f.ref, { ...payloadRef.current, _client: CLIENT_ID, _ts: Date.now() }).catch(() => { });
         }, 600);
         return () => clearTimeout(saveTimer.current);
-    }, [bandName, siteUrl, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
+    }, [bandName, siteUrl, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
     // ---- メンバーとステージ図の同期 ----
     useEffect(() => {
         setStageItems((prev) => {
@@ -17538,12 +17544,13 @@ function App() {
     const updateHpStatus = (docId, status) => { const f = fsRef.current; if (f && f.db && f.fsM && f.fsM.updateDoc) {
         try { f.fsM.updateDoc(f.fsM.doc(f.db, "bands", f.bandId, "reservations", docId), { status }).catch(() => { }); }
         catch (e) { } } };
-    const acceptHp = (r) => { setReservations((p) => p.some((x) => x.srcDoc === r._docId) ? p : [...p, { id: "h" + Date.now(), name: r.name || "(無名)", qty: r.count || r.qty || 1, fromHP: true, srcDoc: r._docId }]); updateHpStatus(r._docId, "accepted"); };
+    const acceptHp = (r) => { setReservations((p) => p.some((x) => x.srcDoc === r._docId) ? p : [...p, { id: "h" + Date.now(), name: r.name || "(無名)", qty: r.count || r.qty || 1, fromHP: true, srcDoc: r._docId, contact: r.contact || "", gigDate: r.gigDate || "" }]); updateHpStatus(r._docId, "accepted"); };
     const dismissHp = (r) => { updateHpStatus(r._docId, "dismissed"); };
     const deleteHpDoc = (docId) => { const f = fsRef.current; if (f && f.db && f.fsM && f.fsM.deleteDoc) {
         try { f.fsM.deleteDoc(f.fsM.doc(f.db, "bands", f.bandId, "reservations", docId)).catch(() => { }); }
         catch (e) { } } };
     const hpResNew = hpRes.filter((r) => (r.status || "new") === "new");
+    const markSent = (key, on = true) => { setSentLog((prev) => { const g = Object.assign({}, prev[currentGigId] || {}); if (on) g[key] = Date.now(); else delete g[key]; return Object.assign({}, prev, { [currentGigId]: g }); }); };
     const setSetlist = (u) => setGigs((p) => p.map((g) => g.id === gig.id ? { ...g, setlist: typeof u === "function" ? u(g.setlist || []) : u } : g));
     const addGig = () => { const id = "g" + Date.now(); setGigs((p) => [...p, { id, venue: "新しいライブ", date: "", ticketPrice: 0, quota: 0, doorSold: 0, transport: 0, reservations: [], setlist: [] }]); setCurrentGigId(id); };
     const deleteGig = () => { if (gigs.length <= 1)
@@ -17564,9 +17571,9 @@ function App() {
         React.createElement("div", { style: { position: "fixed", inset: 0, background: "radial-gradient(60% 45% at 50% 0%, rgba(255,30,60,.14), transparent 70%), radial-gradient(50% 40% at 85% 100%, rgba(255,30,60,.05), transparent 70%)", pointerEvents: "none" } }),
         React.createElement("div", { style: { position: "relative", maxWidth: 560, margin: "0 auto", paddingTop: "calc(14px + env(safe-area-inset-top))", paddingBottom: "calc(120px + env(safe-area-inset-bottom))" } },
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
-            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
+            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
-            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, hpAll: hpRes, acceptHp, dismissHp, deleteHpDoc, siteUrl }),
+            screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, hpAll: hpRes, acceptHp, dismissHp, deleteHpDoc, siteUrl, sentForGig: (sentLog[currentGigId] || {}), markSent, sendEmail }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash }),
             screen === "funds" && React.createElement(BandFunds, { ledger, setLedger, learnedItems, setLearnedItems }),
             screen === "tasks" && React.createElement(TasksS, { tasks, setTasks })),
@@ -17668,7 +17675,7 @@ function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, need
             "\u30AA\u30D5\u30A3\u30B7\u30E3\u30EB\u30B5\u30A4\u30C8\u3092\u958B\u304F"))));
 }
 // ===================== SETTINGS =====================
-function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
+function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
     const [cfgText, setCfgText] = useState("");
     const upd = (id, patch) => setMembers((p) => p.map((m) => m.id === id ? { ...m, ...patch } : m));
     const cycleColor = (id, cur) => { const i = MEMBER_COLORS.indexOf(cur); upd(id, { color: MEMBER_COLORS[(i + 1) % MEMBER_COLORS.length] }); };
@@ -17708,6 +17715,10 @@ function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, members, setMem
             React.createElement(Label, null, "\u30AA\u30D5\u30A3\u30B7\u30E3\u30EB\u30B5\u30A4\u30C8URL"),
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4 } }, "\u30B5\u30A4\u30C8\u3092\u516C\u958B\u3057\u305F\u3089URL\u3092\u8CBC\u308B\u3068\u3001\u30DB\u30FC\u30E0\u306B\u300C\u30B5\u30A4\u30C8\u3092\u958B\u304F\u300D\u30DC\u30BF\u30F3\u304C\u51FA\u307E\u3059\u3002"),
             React.createElement("input", { value: siteUrl, onChange: (e) => setSiteUrl(e.target.value), placeholder: "https://...", style: { ...inp, marginTop: 8 } })),
+        React.createElement(Card, { style: { marginTop: 12 } },
+            React.createElement(Label, null, "\u9001\u4FE1\u7528\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\uFF08\u5171\u6709\uFF09"),
+            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u30D0\u30F3\u30C9\u5C02\u7528\u306E\u7121\u6599\u30E1\u30FC\u30EB\uFF08Gmail\u7B49\uFF09\u3092\u4F5C\u3063\u3066\u3053\u3053\u306B\u5165\u308C\u308B\u3068\u3001\u30E1\u30F3\u30D0\u30FC\u5168\u54E1\u3067\u5171\u6709\u3055\u308C\u307E\u3059\u3002\u3053\u306E\u30A2\u30C9\u30EC\u30B9\u3092\u5404\u81EA\u306E\u30E1\u30FC\u30EB\u30A2\u30D7\u30EA\u306B\u8FFD\u52A0\u3057\u3066\u304A\u304F\u3068\u3001\u9001\u4FE1\u5143\u3092\u63C3\u3048\u3089\u308C\u307E\u3059\u3002"),
+            React.createElement("input", { value: sendEmail, onChange: (e) => setSendEmail(e.target.value), placeholder: "tulipparty.info@gmail.com", inputMode: "email", autoCapitalize: "none", style: { ...inp, marginTop: 8 } })),
         React.createElement(Card, { style: { marginTop: 12 } },
             React.createElement(Label, null, "\u30E1\u30F3\u30D0\u30FC / \u30D1\u30FC\u30C8"),
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4 } }, "\u8272\u306E\u4E38\u3092\u30BF\u30C3\u30D7\u3067\u8272\u3092\u5909\u66F4\u3002\u914D\u7F6E\u56F3\u30FBPA\u30FB\u65E5\u7A0B\u306B\u53CD\u6620\u3055\u308C\u307E\u3059\u3002"),
@@ -17983,11 +17994,12 @@ function Money({ gig, updateGig, deleteGig, gigs, sold, reserved, profit, needFo
             React.createElement("br", null),
             "\u7269\u8CA9\u306F\u300C\u7269\u8CA9\u300D\u30BF\u30D6\u306E\u58F2\u4E0A\u3068\u9023\u52D5\u3057\u307E\u3059\u3002")));
 }
-function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], acceptHp, dismissHp, deleteHpDoc, gig, siteUrl, flash }) {
+function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], acceptHp, dismissHp, deleteHpDoc, gig, siteUrl, sentForGig = {}, markSent, sendEmail, flash }) {
     const [name, setName] = useState("");
     const [qty, setQty] = useState(1);
     const [custOpen, setCustOpen] = useState(false);
     const [promoMsg, setPromoMsg] = useState("");
+    const [qrOpen, setQrOpen] = useState(false);
     const total = reservations.reduce((s, r) => s + r.qty, 0);
     const custKey = (r) => ((r.contact || "").trim()) || ((r.name || "").trim()) || r._docId;
     const custList = (() => {
@@ -18013,15 +18025,15 @@ function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], accept
             const p = (n) => String(n).padStart(2, "0");
             return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())}(${w})`;
         })();
-        const lines = ["🌷 TULIP PARTY LIVE 🌷"];
+        const lines = ["TULIP PARTY LIVE"];
         if (gig.eventTitle) lines.push(gig.eventTitle);
-        if (dstr) lines.push("📅 " + dstr);
-        if (gig.venue) lines.push("📍 " + gig.venue);
+        if (dstr) lines.push("日時: " + dstr);
+        if (gig.venue) lines.push("会場: " + gig.venue);
         const t = [];
         if (gig.openTime) t.push("OPEN " + gig.openTime);
         if (gig.startTime) t.push("START " + gig.startTime);
-        if (t.length) lines.push("🕐 " + t.join(" / "));
-        if (gig.ticketPrice) lines.push("🎫 前売 ¥" + Number(gig.ticketPrice).toLocaleString("ja-JP"));
+        if (t.length) lines.push(t.join(" / "));
+        if (gig.ticketPrice) lines.push("前売 ¥" + Number(gig.ticketPrice).toLocaleString("ja-JP"));
         if (gig.acts) lines.push("w/ " + gig.acts);
         return lines.join("\n");
     })();
@@ -18046,10 +18058,11 @@ function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], accept
         const isEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact);
         if (isEmail) {
             window.location.href = "mailto:" + encodeURIComponent(contact) + "?subject=" + encodeURIComponent("TULIP PARTY ライブのお知らせ") + "&body=" + encodeURIComponent(text);
+            markSent && markSent(c.key);
         } else {
             const handle = contact.replace(/^@/, "").replace(/^https?:\/\/(x|twitter)\.com\//i, "").split(/[/?]/)[0];
             const copy = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.resolve();
-            copy.finally(() => { flash && flash("メッセージをコピー。XのDMで貼り付けて送ってください"); if (handle) window.open("https://x.com/" + handle, "_blank"); });
+            copy.finally(() => { flash && flash("メッセージをコピー。XのDMで貼り付けて送ってください"); if (handle) window.open("https://x.com/" + handle, "_blank"); markSent && markSent(c.key); });
         }
     };
     const deleteCustomer = (c) => {
@@ -18079,6 +18092,16 @@ function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], accept
         React.createElement("button", { onClick: copyPromo, style: { width: "100%", height: 46, marginBottom: 12, borderRadius: 12, border: `1px solid ${COL.accent}`, background: COL.panel2, color: COL.accent, fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" } },
             React.createElement(Ic, { name: "ExternalLink", size: 16 }),
             "\u5BA3\u4F1D\u30EA\u30F3\u30AF\u3092\u30B3\u30D4\u30FC\uFF08X\u7528\uFF09"),
+        React.createElement("button", { onClick: () => { if (!promoLink) { flash && flash("先に設定でサイトURLを入力してください"); return; } setQrOpen(true); }, style: { width: "100%", height: 46, marginBottom: 12, borderRadius: 12, border: `1px solid ${COL.line}`, background: COL.panel2, color: COL.text, fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" } },
+            React.createElement(Ic, { name: "QrCode", size: 16 }),
+            "QRコードを表示"),
+        qrOpen && React.createElement("div", { onClick: () => setQrOpen(false), style: { position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.88)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 } },
+            React.createElement("div", { style: { fontWeight: 800, fontSize: 14, color: "#fff", letterSpacing: ".04em" } }, "取り置きページ QRコード"),
+            React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { background: "#fff", padding: 14, borderRadius: 16, lineHeight: 0 } },
+                React.createElement("img", { src: "https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=12&data=" + encodeURIComponent(promoLink), alt: "QR", style: { width: "min(70vw, 300px)", height: "min(70vw, 300px)", display: "block" } })),
+            React.createElement("div", { style: { color: "#fff", fontSize: 12, textAlign: "center", lineHeight: 1.8 } }, "長押しで画像を保存 → フライヤーや物販POPに使えます"),
+            React.createElement("div", { style: { color: COL.sub, fontSize: 10, wordBreak: "break-all", maxWidth: 320, textAlign: "center" } }, promoLink),
+            React.createElement("button", { onClick: (e) => { e.stopPropagation(); setQrOpen(false); }, style: { marginTop: 4, height: 44, padding: "0 28px", borderRadius: 12, border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "閉じる")),
         React.createElement(Card, null,
             React.createElement(RowB, null,
                 React.createElement(Label, null, "\u53D6\u308A\u7F6E\u304D\u30C1\u30B1\u30C3\u30C8\u540D\u7C3F"),
@@ -18114,7 +18137,8 @@ function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], accept
                 React.createElement("div", { style: { padding: "12px 14px", borderRadius: 12, border: `1px solid ${COL.line}`, background: COL.panel, marginBottom: 12 } },
                     React.createElement("div", { style: { fontWeight: 800, fontSize: 12, marginBottom: 2 } }, "宣伝メッセージ（集客用）"),
                     React.createElement("div", { style: { fontSize: 10, color: COL.sub, marginBottom: 8, lineHeight: 1.6 } }, "上部に一言だけ書けばOK。ライブ詳細とリンクは自動で付きます。"),
-                    React.createElement("textarea", { value: promoMsg, onChange: (e) => setPromoMsg(e.target.value), placeholder: "例）遊びに来てね！チケット取り置き受付中です🌷", rows: 2, style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${COL.line}`, background: COL.ink, color: COL.text, fontFamily: "inherit", fontSize: 13, resize: "vertical" } }),
+                    sendEmail ? React.createElement("div", { style: { fontSize: 10, color: COL.mint, fontWeight: 700, marginBottom: 8 } }, "共有送信元: " + sendEmail) : React.createElement("div", { style: { fontSize: 10, color: COL.sub, marginBottom: 8 } }, "※設定で「送信用メールアドレス（共有）」を入れると全員で共有できます"),
+                    React.createElement("textarea", { value: promoMsg, onChange: (e) => setPromoMsg(e.target.value), placeholder: "例）遊びに来てね！チケット取り置き受付中です", rows: 2, style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${COL.line}`, background: COL.ink, color: COL.text, fontFamily: "inherit", fontSize: 13, resize: "vertical" } }),
                     React.createElement("div", { style: { fontSize: 10, color: COL.sub, margin: "8px 0 4px", fontWeight: 700 } }, "送信される全文（プレビュー）" + (promoLink ? "" : " ※設定でサイトURLを入れるとリンクが付きます")),
                     React.createElement("div", { style: { fontSize: 12, color: COL.text, background: COL.ink, border: `1px solid ${COL.line}`, borderRadius: 8, padding: "10px 12px", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.6, maxHeight: 220, overflowY: "auto", margin: "0 0 10px" } }, fullMsg()),
                     React.createElement("button", { onClick: copyMessage, style: { width: "100%", height: 42, borderRadius: 10, border: "none", background: COL.accent, color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 } }, React.createElement(Ic, { name: "ExternalLink", size: 14 }), "メッセージ全文をコピー")),
@@ -18123,11 +18147,14 @@ function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], accept
                     React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                         React.createElement("div", { style: { fontWeight: 700, fontSize: 13 } }, c.name || "(無名)"),
                         c.contact ? React.createElement("div", { style: { fontSize: 11, color: COL.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, c.contact) : null,
-                        c.gigDate ? React.createElement("div", { style: { fontSize: 10, color: COL.sub } }, c.gigDate) : null),
-                    c.contact ? React.createElement("button", { onClick: () => sendTo(c), style: { height: 32, padding: "0 12px", borderRadius: 8, border: `1px solid ${COL.accent}`, background: "transparent", color: COL.accent, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 } }, "送る") : null,
+                        c.gigDate ? React.createElement("div", { style: { fontSize: 10, color: COL.sub } }, c.gigDate) : null,
+                        sentForGig[c.key] ? React.createElement("button", { onClick: () => markSent && markSent(c.key, false), style: { marginTop: 4, fontSize: 9, fontWeight: 800, color: COL.mint, background: "transparent", border: `1px solid ${COL.mint}`, borderRadius: 5, padding: "1px 6px", cursor: "pointer", fontFamily: "inherit" } }, "送信済み ✓（取消）") : null),
+                    c.contact ? React.createElement("button", { onClick: () => sendTo(c), style: { height: 32, padding: "0 12px", borderRadius: 8, border: `1px solid ${sentForGig[c.key] ? COL.line : COL.accent}`, background: "transparent", color: sentForGig[c.key] ? COL.sub : COL.accent, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 } }, sentForGig[c.key] ? "再送" : "送る") : null,
                     React.createElement("button", { onClick: () => deleteCustomer(c), style: { height: 32, width: 32, borderRadius: 8, border: `1px solid ${COL.line}`, background: "transparent", color: COL.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, React.createElement(Ic, { name: "Trash2", size: 14 })))))) : null) : null,
         React.createElement("div", { style: { marginTop: 12, display: "flex", flexDirection: "column", gap: 8 } }, reservations.map((r) => (React.createElement(RowB, { key: r.id, style: { background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 14, padding: "12px 14px" } },
-            React.createElement("span", { style: { fontWeight: 700, flex: 1, display: "flex", alignItems: "center", gap: 6 } }, r.name, r.fromHP ? React.createElement("span", { style: { fontSize: 8, fontWeight: 800, color: "#fff", background: COL.accent, borderRadius: 5, padding: "1px 5px" } }, "HP") : null),
+            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                React.createElement("div", { style: { fontWeight: 700, display: "flex", alignItems: "center", gap: 6 } }, r.name, r.fromHP ? React.createElement("span", { style: { fontSize: 8, fontWeight: 800, color: "#fff", background: COL.accent, borderRadius: 5, padding: "1px 5px" } }, "HP") : null),
+                (function () { var ct = r.contact || (r.fromHP && r.srcDoc ? ((hpAll || []).find((x) => x._docId === r.srcDoc) || {}).contact : "") || ""; return ct ? React.createElement("div", { style: { fontSize: 11, color: COL.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ct) : null; })()),
             React.createElement("span", { style: { fontWeight: 800, marginRight: 12 } },
                 r.qty,
                 "\u679A"),
