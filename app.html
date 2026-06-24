@@ -21,6 +21,16 @@ html,body{background:#070708;color-scheme:dark}
 .tap:active{transform:scale(.97)}.tap{transition:transform .08s}
 ::-webkit-scrollbar{width:0}
 input,textarea,button{font-family:inherit}
+.sc-root{position:fixed;inset:0;z-index:1000;background:#000;color:#fff;overflow:hidden}
+.sc-bg{position:absolute;inset:0;background:radial-gradient(60% 50% at 50% 18%,rgba(255,30,60,.22),transparent 62%),radial-gradient(55% 45% at 85% 100%,rgba(255,30,60,.10),transparent 60%),#050506;animation:scGlow 9s ease-in-out infinite alternate}
+@keyframes scGlow{from{filter:hue-rotate(0deg) brightness(1)}to{filter:hue-rotate(-8deg) brightness(1.12)}}
+.sc-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:7vh 7vw;animation:scIn .9s cubic-bezier(.2,.8,.2,1) both;z-index:2}
+@keyframes scIn{from{opacity:0;transform:translateY(22px) scale(.992)}to{opacity:1;transform:none}}
+.sc-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%}
+.sc-split{display:flex;align-items:center;justify-content:center;gap:min(6vw,70px);flex-wrap:wrap;width:100%}
+.sc-col{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
+.sc-kb{animation:scKB 13s ease-out both}
+@keyframes scKB{from{transform:scale(1)}to{transform:scale(1.07)}}
 </style>
 </head>
 <body>
@@ -17323,12 +17333,119 @@ function PadSec({ value, onCommit, style }) {
     return (React.createElement("input", { ref: ref, type: "text", inputMode: "numeric", value: t, onFocus: (e) => e.target.select(), onChange: (e) => { const v = e.target.value.replace(/\D/g, "").slice(-2); setT(v); const n = parseInt(v || "0"); if (!isNaN(n))
         onCommit(Math.min(59, n)); }, onBlur: () => setT(String(Math.min(59, parseInt(t || "0") || 0)).padStart(2, "0")), style: { ...inp, ...style } }));
 }
+function scYtId(u){ if(!u) return ''; var m=String(u).match(/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/); return m?m[1]:''; }
+function scQR(data,size){ return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||'520x520')+'&margin=12&data='+encodeURIComponent(data); }
+function scDate(d){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d||''); var WDx=['SUN','MON','TUE','WED','THU','FRI','SAT']; if(!m) return {y:'',md:'',wd:'',full:''}; var dt=new Date(+m[1],+m[2]-1,+m[3]); return {y:m[1], md:m[2]+'.'+m[3], wd:WDx[dt.getDay()], full:m[1]+'.'+m[2]+'.'+m[3]}; }
+function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose }) {
+    const [i, setI] = useState(0);
+    const DISPF = "'Unbounded','Zen Kaku Gothic New',sans-serif";
+    const MONO = "ui-monospace,'SF Mono',Menlo,monospace";
+    const A = COL.accent;
+    const todayStart = new Date(new Date().toDateString()).getTime();
+    const future = (gigs || []).filter((g) => g.date).map((g) => ({ g, ts: new Date(g.date).getTime() })).filter((x) => !isNaN(x.ts) && x.ts >= todayStart).sort((a, b) => a.ts - b.ts);
+    const next = future[0] ? future[0].g : null;
+    const base = (siteUrl || "").trim().replace(/#.*$/, "");
+    const liveLink = (id) => !base ? "" : ((base.endsWith(".html") || base.endsWith("/")) ? base + "#live/" + id : base + "/#live/" + id);
+    const vid = scYtId(showcaseVideo);
+    const goods = (products || []).filter((p) => p && p.name);
+    // スライド構成
+    const slides = [];
+    slides.push({ type: "intro", dur: 7000 });
+    if (next) slides.push({ type: "next", dur: 12000 });
+    if (future.length > 1) slides.push({ type: "upcoming", dur: 10000 });
+    goods.forEach((p) => slides.push({ type: "merch", dur: 8000, p }));
+    if (vid) slides.push({ type: "video", dur: 32000 });
+    slides.push({ type: "follow", dur: 9000 });
+    const n = slides.length;
+    const cur = slides[i % n];
+    useEffect(() => {
+        if (!n) return;
+        const t = setTimeout(() => setI((x) => (x + 1) % n), (slides[i % n] && slides[i % n].dur) || 8000);
+        return () => clearTimeout(t);
+    }, [i, n]);
+    const go = (dir) => setI((x) => (x + dir + n) % n);
+    const kicker = (txt) => React.createElement("div", { style: { fontFamily: MONO, letterSpacing: ".42em", fontSize: "clamp(11px,1.9vw,16px)", color: A, textTransform: "uppercase" } }, txt);
+    const card = (children, style) => React.createElement("div", { style: Object.assign({ background: "#fff", padding: "min(2.4vw,18px)", borderRadius: 18, lineHeight: 0 }, style || {}) }, children);
+    function renderSlide(s) {
+        if (s.type === "intro") {
+            return React.createElement("div", { className: "sc-mid sc-kb" },
+                React.createElement("div", { style: { fontFamily: DISPF, fontWeight: 900, fontSize: "clamp(44px,12vw,140px)", lineHeight: .92, textTransform: "lowercase", letterSpacing: "-.02em" } }, bandName),
+                React.createElement("div", { style: { marginTop: "3.5vh" } }, kicker("Loud Rock from Yamaguchi")),
+                React.createElement("div", { style: { marginTop: "5vh", fontSize: "clamp(13px,2.1vw,18px)", color: "rgba(255,255,255,.55)", letterSpacing: ".1em" } }, "物販・取り置き受付中"));
+        }
+        if (s.type === "next") {
+            const f = scDate(next.date);
+            const link = liveLink(next.id);
+            const rows = [];
+            if (next.openTime) rows.push(["OPEN", next.openTime]);
+            if (next.startTime) rows.push(["START", next.startTime]);
+            if (next.ticketPrice) rows.push(["ADV", "¥" + Number(next.ticketPrice).toLocaleString("ja-JP")]);
+            return React.createElement("div", { className: "sc-split" },
+                React.createElement("div", { style: { flex: "1 1 420px", minWidth: 280 } },
+                    kicker("Next Live"),
+                    React.createElement("div", { style: { fontFamily: DISPF, fontWeight: 900, fontSize: "clamp(40px,8vw,96px)", lineHeight: .98, marginTop: "2vh" } }, f.full),
+                    React.createElement("div", { style: { fontFamily: MONO, color: A, fontSize: "clamp(13px,2vw,20px)", letterSpacing: ".2em", marginTop: 6 } }, f.wd),
+                    React.createElement("div", { style: { fontWeight: 900, fontSize: "clamp(22px,4.4vw,46px)", marginTop: "3vh", lineHeight: 1.1 } }, next.venue || next.eventTitle || "LIVE"),
+                    next.eventTitle && next.eventTitle !== next.venue ? React.createElement("div", { style: { fontSize: "clamp(13px,2.2vw,20px)", color: "rgba(255,255,255,.7)", marginTop: 8 } }, next.eventTitle) : null,
+                    next.acts ? React.createElement("div", { style: { fontSize: "clamp(12px,1.9vw,16px)", color: "rgba(255,255,255,.5)", marginTop: 6 } }, "w/ " + next.acts) : null,
+                    rows.length ? React.createElement("div", { style: { display: "flex", gap: "min(4vw,34px)", marginTop: "4vh", flexWrap: "wrap" } }, rows.map((r, idx) => React.createElement("div", { key: idx },
+                        React.createElement("div", { style: { fontFamily: MONO, fontSize: "clamp(10px,1.5vw,13px)", letterSpacing: ".22em", color: "rgba(255,255,255,.45)" } }, r[0]),
+                        React.createElement("div", { style: { fontWeight: 800, fontSize: "clamp(18px,3vw,30px)", marginTop: 4 } }, r[1])))) : null),
+                link ? React.createElement("div", { style: { textAlign: "center", flex: "0 0 auto" } },
+                    card(React.createElement("img", { src: scQR(link), alt: "QR", style: { width: "min(30vw,260px)", height: "min(30vw,260px)", display: "block" } })),
+                    React.createElement("div", { style: { marginTop: 14, fontFamily: MONO, letterSpacing: ".18em", fontSize: "clamp(11px,1.7vw,15px)", color: A } }, "SCAN TO RESERVE"),
+                    React.createElement("div", { style: { marginTop: 4, fontSize: "clamp(11px,1.7vw,14px)", color: "rgba(255,255,255,.6)" } }, "スマホで読み取り → 取り置き予約")) : null);
+        }
+        if (s.type === "upcoming") {
+            return React.createElement("div", { className: "sc-col" },
+                kicker("Upcoming Shows"),
+                React.createElement("div", { style: { marginTop: "3vh", display: "flex", flexDirection: "column", gap: "min(2.4vh,20px)", width: "min(880px,90vw)" } },
+                    future.slice(0, 5).map((x, idx) => { const f = scDate(x.g.date); return React.createElement("div", { key: idx, style: { display: "flex", gap: "min(4vw,30px)", alignItems: "baseline", borderBottom: "1px solid rgba(255,255,255,.12)", paddingBottom: "min(2vh,16px)" } },
+                        React.createElement("div", { style: { fontFamily: MONO, fontWeight: 800, fontSize: "clamp(18px,3.2vw,34px)", minWidth: "5.5em" } }, f.full),
+                        React.createElement("div", { style: { fontFamily: MONO, color: A, fontSize: "clamp(11px,1.7vw,16px)", minWidth: "3em" } }, f.wd),
+                        React.createElement("div", { style: { fontWeight: 800, fontSize: "clamp(16px,2.8vw,30px)" } }, x.g.venue || x.g.eventTitle || "LIVE")); })));
+        }
+        if (s.type === "merch") {
+            const p = s.p;
+            return React.createElement("div", { className: "sc-mid sc-kb" },
+                kicker("Official Goods"),
+                React.createElement("div", { style: { fontFamily: DISPF, fontWeight: 900, fontSize: "clamp(34px,7vw,86px)", lineHeight: 1.02, marginTop: "3vh", maxWidth: "90vw" } }, p.name),
+                React.createElement("div", { style: { marginTop: "4vh", fontWeight: 900, fontSize: "clamp(30px,6vw,72px)", color: A } }, p.price > 0 ? "¥" + Number(p.price).toLocaleString("ja-JP") : "COMING SOON"),
+                (p.stock > 0) ? React.createElement("div", { style: { marginTop: "2.5vh", fontFamily: MONO, letterSpacing: ".2em", fontSize: "clamp(11px,1.7vw,15px)", color: "rgba(255,255,255,.5)" } }, "物販ブースにて販売中") : null);
+        }
+        if (s.type === "video") {
+            return React.createElement("iframe", { title: "video", src: "https://www.youtube.com/embed/" + vid + "?autoplay=1&mute=1&loop=1&playlist=" + vid + "&controls=0&modestbranding=1&playsinline=1&rel=0", allow: "autoplay; encrypted-media", frameBorder: "0", style: { position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 } });
+        }
+        // follow
+        const link = base || siteUrl || "";
+        return React.createElement("div", { className: "sc-split" },
+            React.createElement("div", { style: { flex: "1 1 380px", minWidth: 280 } },
+                kicker("Follow Us"),
+                React.createElement("div", { style: { fontFamily: DISPF, fontWeight: 900, fontSize: "clamp(34px,7vw,84px)", lineHeight: 1, marginTop: "2vh", textTransform: "lowercase" } }, bandName),
+                React.createElement("div", { style: { marginTop: "4vh", display: "flex", flexDirection: "column", gap: 10, fontSize: "clamp(14px,2.3vw,22px)", fontWeight: 700 } },
+                    React.createElement("div", null, React.createElement("span", { style: { color: A, fontFamily: MONO, marginRight: 10 } }, "X"), "@tulipparty1531"),
+                    React.createElement("div", { style: { color: "rgba(255,255,255,.7)", fontSize: "clamp(12px,1.9vw,17px)", fontWeight: 600 } }, "最新情報・ライブ情報はSNSで"))),
+            link ? React.createElement("div", { style: { textAlign: "center", flex: "0 0 auto" } },
+                card(React.createElement("img", { src: scQR(link), alt: "QR", style: { width: "min(30vw,260px)", height: "min(30vw,260px)", display: "block" } })),
+                React.createElement("div", { style: { marginTop: 14, fontFamily: MONO, letterSpacing: ".18em", fontSize: "clamp(11px,1.7vw,15px)", color: A } }, "OFFICIAL SITE")) : null);
+    }
+    return React.createElement("div", { className: "sc-root" },
+        React.createElement("div", { className: "sc-bg" }),
+        React.createElement("div", { className: "sc-slide", key: i }, renderSlide(cur)),
+        React.createElement("div", { onClick: () => go(-1), style: { position: "absolute", left: 0, top: 0, bottom: 0, width: "28%", zIndex: 5, cursor: "pointer" } }),
+        React.createElement("div", { onClick: () => go(1), style: { position: "absolute", right: 0, top: 0, bottom: 0, width: "28%", zIndex: 5, cursor: "pointer" } }),
+        React.createElement("button", { onClick: onClose, style: { position: "absolute", top: "max(16px,env(safe-area-inset-top))", right: 18, zIndex: 10, width: 46, height: 46, borderRadius: 999, border: "1px solid rgba(255,255,255,.25)", background: "rgba(0,0,0,.4)", color: "#fff", fontSize: 20, cursor: "pointer", fontFamily: "inherit" } }, "\u2715"),
+        React.createElement("div", { style: { position: "absolute", bottom: "max(20px,env(safe-area-inset-bottom))", left: 0, right: 0, display: "flex", justifyContent: "center", gap: 8, zIndex: 6, pointerEvents: "none" } },
+            slides.map((s, idx) => React.createElement("div", { key: idx, style: { width: idx === (i % n) ? 26 : 8, height: 8, borderRadius: 999, background: idx === (i % n) ? A : "rgba(255,255,255,.3)", transition: "all .35s ease" } }))));
+}
 function App() {
     const [screen, setScreen] = useState("home");
+    const [showcase, setShowcase] = useState(false); // 物販モード(ショーケース)
     const [toast, setToast] = useState(null);
     const C = CACHED || {};
     const [bandName, setBandName] = useState(C.bandName || "tulip party");
     const [siteUrl, setSiteUrl] = useState(C.siteUrl || "");
+    const [showcaseVideo, setShowcaseVideo] = useState(C.showcaseVideo || ""); // ショーケース用 YouTube URL
     const [sendEmail, setSendEmail] = useState(C.sendEmail || ""); // メンバー共有の送信用アドレス
     const [sentLog, setSentLog] = useState(C.sentLog || {}); // { [gigId]: { [contactKey]: ts } } 送信済み(ライブ別)
     const [members, setMembers] = useState(C.members || MEMBERS);
@@ -17360,6 +17477,8 @@ function App() {
             setBandName(d.bandName);
         if (d.siteUrl !== undefined)
             setSiteUrl(d.siteUrl);
+        if (d.showcaseVideo !== undefined)
+            setShowcaseVideo(d.showcaseVideo);
         if (d.sendEmail !== undefined)
             setSendEmail(d.sendEmail);
         if (d.sentLog !== undefined)
@@ -17450,7 +17569,7 @@ function App() {
     }, [syncCfg]);
     // ---- 保存（スマホ内 + 共有中ならクラウド） ----
     useEffect(() => {
-        const d = { bandName, siteUrl, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
+        const d = { bandName, siteUrl, showcaseVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
         payloadRef.current = d;
         try {
             localStorage.setItem("tp-data", JSON.stringify(d));
@@ -17470,7 +17589,7 @@ function App() {
             f.fsM.setDoc(f.ref, { ...payloadRef.current, _client: CLIENT_ID, _ts: Date.now() }).catch(() => { });
         }, 600);
         return () => clearTimeout(saveTimer.current);
-    }, [bandName, siteUrl, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
+    }, [bandName, siteUrl, showcaseVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
     // ---- メンバーとステージ図の同期 ----
     useEffect(() => {
         setStageItems((prev) => {
@@ -17553,8 +17672,15 @@ function App() {
     const markSent = (key, on = true) => { setSentLog((prev) => { const g = Object.assign({}, prev[currentGigId] || {}); if (on) g[key] = Date.now(); else delete g[key]; return Object.assign({}, prev, { [currentGigId]: g }); }); };
     const setSetlist = (u) => setGigs((p) => p.map((g) => g.id === gig.id ? { ...g, setlist: typeof u === "function" ? u(g.setlist || []) : u } : g));
     const addGig = () => { const id = "g" + Date.now(); setGigs((p) => [...p, { id, venue: "新しいライブ", date: "", ticketPrice: 0, quota: 0, doorSold: 0, transport: 0, reservations: [], setlist: [] }]); setCurrentGigId(id); };
-    const deleteGig = () => { if (gigs.length <= 1)
-        return; const left = gigs.filter((g) => g.id !== gig.id); setGigs(left); setCurrentGigId(left[0].id); };
+    const deleteGig = () => {
+        if (!window.confirm("このライブを削除しますか？このライブの取り置き・収支・セトリも消えます。")) return;
+        if (gigs.length <= 1) {
+            const id = "g" + Date.now();
+            const fresh = { id, venue: "新しいライブ", date: "", ticketPrice: 0, quota: 0, doorSold: 0, transport: 0, reservations: [], setlist: [] };
+            setGigs([fresh]); setCurrentGigId(id); return;
+        }
+        const left = gigs.filter((g) => g.id !== gig.id); setGigs(left); setCurrentGigId(left[0].id);
+    };
     const reserved = reservations.reduce((s, r) => s + r.qty, 0);
     const sold = reserved + gig.doorSold;
     const merchRev = sales.reduce((s, x) => s + x.rev, 0);
@@ -17571,17 +17697,18 @@ function App() {
         React.createElement("div", { style: { position: "fixed", inset: 0, background: "radial-gradient(60% 45% at 50% 0%, rgba(255,30,60,.14), transparent 70%), radial-gradient(50% 40% at 85% 100%, rgba(255,30,60,.05), transparent 70%)", pointerEvents: "none" } }),
         React.createElement("div", { style: { position: "relative", maxWidth: 560, margin: "0 auto", paddingTop: "calc(14px + env(safe-area-inset-top))", paddingBottom: "calc(120px + env(safe-area-inset-bottom))" } },
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
-            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
+            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
             screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, hpAll: hpRes, acceptHp, dismissHp, deleteHpDoc, siteUrl, sentForGig: (sentLog[currentGigId] || {}), markSent, sendEmail }),
-            screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash }),
+            screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash, onShowcase: () => setShowcase(true) }),
             screen === "funds" && React.createElement(BandFunds, { ledger, setLedger, learnedItems, setLearnedItems }),
             screen === "tasks" && React.createElement(TasksS, { tasks, setTasks })),
         React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: 0, background: "rgba(7,7,8,.94)", borderTop: `1px solid ${COL.line}`, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", paddingBottom: "env(safe-area-inset-bottom)", zIndex: 20 } },
             React.createElement("div", { className: "flex", style: { maxWidth: 560, margin: "0 auto", height: 64, display: "flex" } }, [["home", "Home", "ホーム"], ["studio", "CalendarDays", "スタジオ"], ["gig", "Ticket", "ライブ"], ["merch", "Store", "物販"], ["funds", "Wallet", "金庫"], ["tasks", "ListChecks", "タスク"]].map(([k, ic, l]) => (React.createElement("button", { key: k, onClick: () => setScreen(k), style: { flex: 1, background: "none", border: "none", color: screen === k ? COL.accent : COL.sub, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, paddingTop: 10, fontSize: 9, fontWeight: 700, fontFamily: "inherit" } },
                 React.createElement(Ic, { name: ic, size: 20 }),
                 l))))),
-        toast && React.createElement("div", { className: "rise", style: { position: "fixed", left: 20, right: 20, bottom: "calc(86px + env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto", background: COL.mint, color: "#06281d", padding: "12px 16px", borderRadius: 14, fontWeight: 800, fontSize: 13, textAlign: "center", zIndex: 30 } }, toast)));
+        toast && React.createElement("div", { className: "rise", style: { position: "fixed", left: 20, right: 20, bottom: "calc(86px + env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto", background: COL.mint, color: "#06281d", padding: "12px 16px", borderRadius: 14, fontWeight: 800, fontSize: 13, textAlign: "center", zIndex: 30 } }, toast),
+        showcase && React.createElement(Showcase, { bandName, siteUrl, gigs, products, showcaseVideo, onClose: () => setShowcase(false) })));
 }
 const Card = ({ children, style }) => React.createElement("div", { className: "rise", style: { background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 18, padding: 16, ...style } }, children);
 const Label = ({ children }) => React.createElement("div", { style: { fontSize: 11, letterSpacing: 1.2, color: COL.sub, fontWeight: 800 } }, children);
@@ -17675,7 +17802,7 @@ function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, need
             "\u30AA\u30D5\u30A3\u30B7\u30E3\u30EB\u30B5\u30A4\u30C8\u3092\u958B\u304F"))));
 }
 // ===================== SETTINGS =====================
-function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
+function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
     const [cfgText, setCfgText] = useState("");
     const upd = (id, patch) => setMembers((p) => p.map((m) => m.id === id ? { ...m, ...patch } : m));
     const cycleColor = (id, cur) => { const i = MEMBER_COLORS.indexOf(cur); upd(id, { color: MEMBER_COLORS[(i + 1) % MEMBER_COLORS.length] }); };
@@ -17715,6 +17842,10 @@ function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, sendEmail, setS
             React.createElement(Label, null, "\u30AA\u30D5\u30A3\u30B7\u30E3\u30EB\u30B5\u30A4\u30C8URL"),
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4 } }, "\u30B5\u30A4\u30C8\u3092\u516C\u958B\u3057\u305F\u3089URL\u3092\u8CBC\u308B\u3068\u3001\u30DB\u30FC\u30E0\u306B\u300C\u30B5\u30A4\u30C8\u3092\u958B\u304F\u300D\u30DC\u30BF\u30F3\u304C\u51FA\u307E\u3059\u3002"),
             React.createElement("input", { value: siteUrl, onChange: (e) => setSiteUrl(e.target.value), placeholder: "https://...", style: { ...inp, marginTop: 8 } })),
+        React.createElement(Card, { style: { marginTop: 12 } },
+            React.createElement(Label, null, "\u30B7\u30E7\u30FC\u30B1\u30FC\u30B9\u52D5\u753B\uFF08YouTube\uFF09"),
+            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u7269\u8CA9\u30E2\u30FC\u30C9\u3067\u6D41\u3059\u52D5\u753B\u306EYouTube URL\u3092\u8CBC\u308A\u4ED8\u3051\u3002\u30E9\u30A4\u30D6\u6620\u50CF\u3084MV\u306A\u3069\u3002\u7A7A\u306E\u5834\u5408\u306F\u52D5\u753B\u30B9\u30E9\u30A4\u30C9\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093\u3002"),
+            React.createElement("input", { value: showcaseVideo, onChange: (e) => setShowcaseVideo(e.target.value), placeholder: "https://youtu.be/...", autoCapitalize: "none", style: { ...inp, marginTop: 8 } })),
         React.createElement(Card, { style: { marginTop: 12 } },
             React.createElement(Label, null, "\u9001\u4FE1\u7528\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\uFF08\u5171\u6709\uFF09"),
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u30D0\u30F3\u30C9\u5C02\u7528\u306E\u7121\u6599\u30E1\u30FC\u30EB\uFF08Gmail\u7B49\uFF09\u3092\u4F5C\u3063\u3066\u3053\u3053\u306B\u5165\u308C\u308B\u3068\u3001\u30E1\u30F3\u30D0\u30FC\u5168\u54E1\u3067\u5171\u6709\u3055\u308C\u307E\u3059\u3002\u3053\u306E\u30A2\u30C9\u30EC\u30B9\u3092\u5404\u81EA\u306E\u30E1\u30FC\u30EB\u30A2\u30D7\u30EA\u306B\u8FFD\u52A0\u3057\u3066\u304A\u304F\u3068\u3001\u9001\u4FE1\u5143\u3092\u63C3\u3048\u3089\u308C\u307E\u3059\u3002"),
@@ -17949,7 +18080,7 @@ function Money({ gig, updateGig, deleteGig, gigs, sold, reserved, profit, needFo
                 React.createElement("div", { style: { width: 78 } },
                     React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginBottom: 4 } }, "START"),
                     React.createElement("input", { type: "time", value: gig.startTime || "", onChange: (e) => set("startTime", e.target.value), style: { ...inp, colorScheme: "dark", padding: "0 6px" } }))),
-            gigs.length > 1 && React.createElement("button", { onClick: deleteGig, style: { marginTop: 10, height: 38, width: "100%", borderRadius: 10, border: `1px solid ${COL.accent}66`, background: COL.panel2, color: COL.accent, fontWeight: 800, fontSize: 12, cursor: "pointer" } }, "\u3053\u306E\u30E9\u30A4\u30D6\u3092\u524A\u9664")),
+            React.createElement("button", { onClick: deleteGig, style: { marginTop: 10, height: 38, width: "100%", borderRadius: 10, border: `1px solid ${COL.accent}66`, background: COL.panel2, color: COL.accent, fontWeight: 800, fontSize: 12, cursor: "pointer" } }, gigs.length > 1 ? "\u3053\u306E\u30E9\u30A4\u30D6\u3092\u524A\u9664" : "\u3053\u306E\u30E9\u30A4\u30D6\u3092\u524A\u9664\uFF08\u65B0\u898F\u306B\u30EA\u30BB\u30C3\u30C8\uFF09")),
         React.createElement(Card, { style: { marginTop: 12, background: profit >= 0 ? "rgba(39,230,165,.08)" : "rgba(255,30,60,.08)", borderColor: (profit >= 0 ? COL.mint : COL.accent) + "55", textAlign: "center" } },
             React.createElement(Label, null,
                 "\u5F53\u65E5\u306E\u898B\u8FBC\u307F",
@@ -18423,7 +18554,7 @@ function ImgPicker({ img, onPick, onClear }) {
         img && React.createElement("button", { onClick: onClear, style: { height: 36, borderRadius: 9, border: "none", background: "transparent", color: COL.sub, cursor: "pointer", display: "flex", alignItems: "center" } },
             React.createElement(Ic, { name: "Trash2", size: 15 }))));
 }
-function MerchS({ products, setProducts, sales, setSales, merchRev, merchProfit, flash }) {
+function MerchS({ products, setProducts, sales, setSales, merchRev, merchProfit, flash, onShowcase }) {
     const [edit, setEdit] = useState(false);
     const [cart, setCart] = useState({});
     const [pay, setPay] = useState(false);
@@ -18480,6 +18611,10 @@ function MerchS({ products, setProducts, sales, setSales, merchRev, merchProfit,
                 React.createElement("button", { onClick: finish, style: { marginTop: 14, width: "100%", height: 52, borderRadius: 13, border: "none", background: COL.accent, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" } }, "\u53D7\u3051\u53D6\u308A\u5B8C\u4E86 \u2014 \u8A18\u9332\u3059\u308B"))));
     }
     return (React.createElement("div", { style: { padding: "6px 16px" } },
+        onShowcase && React.createElement("button", { onClick: onShowcase, style: { width: "100%", marginBottom: 14, padding: "14px 16px", borderRadius: 16, border: `1px solid ${COL.accent}`, background: "linear-gradient(135deg, rgba(255,30,60,.18), rgba(255,30,60,.04))", color: COL.text, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, letterSpacing: ".04em" } },
+            React.createElement("span", { style: { color: COL.accent, fontSize: 16 } }, "\u25B6"),
+            "物販モード（ショーケース）を開始",
+            React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: COL.sub, letterSpacing: ".06em" } }, "iPad横向き推奨")),
         React.createElement(RowB, { style: { marginBottom: 6 } },
             React.createElement(H, null, "\u7269\u8CA9"),
             React.createElement("button", { onClick: () => setEdit(!edit), style: { display: "flex", alignItems: "center", gap: 6, background: edit ? COL.mint : COL.panel, border: `1px solid ${edit ? COL.mint : COL.line}`, color: edit ? "#06281d" : COL.text, borderRadius: 999, padding: "7px 13px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, edit ? "完了" : "編集")),
