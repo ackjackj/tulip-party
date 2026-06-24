@@ -343,6 +343,20 @@ section{position:relative;background:var(--bg)}
 }
 .gig-btn:hover{background:var(--red-deep);box-shadow:0 0 34px rgba(255,30,60,.5)}
 .live-note{margin-top:20px;font-size:13px;color:var(--txt2);letter-spacing:.06em;text-align:center}
+#live-list{margin-top:26px;display:none}
+#live-list.on{display:block}
+#live-list .ll-head{display:flex;align-items:baseline;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--txt3);margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08)}
+#live-list .ll-head span{font-family:'Zen Kaku Gothic New',sans-serif;letter-spacing:.1em;font-size:11px;color:var(--txt2)}
+#live-list .ll-item{display:flex;gap:14px;padding:15px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+#live-list .ll-date{flex:0 0 auto;min-width:88px;display:flex;flex-direction:column;gap:2px}
+#live-list .ll-date b{font-family:var(--mono);font-size:15px;color:var(--text,#fff);letter-spacing:.02em}
+#live-list .ll-date span{font-family:var(--mono);font-size:11px;color:var(--red);letter-spacing:.1em}
+#live-list .ll-body{flex:1 1 auto;min-width:0}
+#live-list .ll-body h4{margin:0;font-size:15px;font-weight:800;letter-spacing:.03em;color:#fff}
+#live-list .ll-body p{margin:5px 0 0;font-size:11.5px;line-height:1.6;color:var(--txt2);letter-spacing:.03em}
+#live-list .ll-btn{display:inline-block;margin-top:10px;padding:8px 16px;border:1px solid var(--red);border-radius:999px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--red);text-decoration:none;transition:background .2s ease,color .2s ease}
+#live-list .ll-btn:active{background:var(--red);color:#fff}
+@media(hover:hover){#live-list .ll-btn:hover{background:var(--red);color:#fff}}
 .live-note a{color:var(--txt);text-decoration-color:var(--red)}
 
 /* ===== ライブ詳細ビュー(フルスクリーン) ===== */
@@ -371,6 +385,14 @@ body.editing .ld-notes:empty{display:block;min-height:1.5em}
 body.editing .ld-notes:empty::before{content:"備考・詳細を入力（任意）";color:var(--txt3)}
 .ld-acts{font-size:12px;color:var(--txt);letter-spacing:.04em;line-height:1.7;margin:14px 0 0;font-weight:500}
 .ld-acts:empty{display:none}
+.ld-access{margin:18px 0 0}
+.ld-acclabel{display:flex;align-items:baseline;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.28em;color:var(--txt3);text-transform:uppercase}
+.ld-addr{font-size:13px;color:var(--txt);letter-spacing:.04em;line-height:1.7;margin:8px 0 0;font-weight:500}
+.ld-addr:empty{display:none}
+body.editing .ld-addr:empty{display:block;min-height:1.2em;opacity:.5}
+.ld-map{margin:10px 0 0}
+.ld-map:empty{display:none}
+.ld-map iframe{display:block;filter:grayscale(.25) contrast(1.05)}
 .ld-flyer-wrap{margin:26px 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#0c0c0e}
 .ld-flyer{display:block;width:100%;height:auto;min-height:220px;object-fit:cover;background:#0c0c0e}
 .ld-flyer-ph{pointer-events:none}
@@ -386,6 +408,11 @@ body.editing .ld-onedrink.ld-empty{display:block;opacity:.5}
 body.editing [data-ld]{outline:1px dashed rgba(255,30,60,.5);outline-offset:3px;border-radius:2px;min-width:2ch;cursor:text}
 body.editing a.play{outline:1px dashed rgba(255,30,60,.5);outline-offset:3px;cursor:pointer}
 body.editing a.release-chip{cursor:pointer}
+.album .am-embed{margin-top:10px}
+.album .am-embed:empty{display:none}
+.album .am-embed iframe{display:block;width:100%}
+.am-edit{display:none;margin-top:8px;width:100%;padding:9px 10px;border:1px dashed rgba(255,30,60,.5);background:transparent;color:var(--red);font-family:inherit;font-size:11px;letter-spacing:.08em;border-radius:8px;cursor:pointer}
+body.editing .am-edit{display:block}
 body.editing .ld-flyer{outline:2px dashed rgba(255,30,60,.55);outline-offset:2px;cursor:pointer}
 /* 取り置きフォーム */
 .ld-res{margin-top:34px;padding:24px 20px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.02)}
@@ -806,6 +833,7 @@ textarea.news-in{resize:vertical;line-height:1.7}
       <a class="gig-btn" href="#live/detail" data-ld-open>DETAILS ＆ 取り置き ↗</a>
       <p class="gig-app-note" style="display:none;margin-top:14px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--txt2)">※ ライブ情報は管理アプリで編集すると自動反映されます</p>
     </div>
+    <div id="live-list"></div>
     <p class="live-note rv">最新のライブ情報は <a href="https://x.com/tulipparty1531" target="_blank" rel="noopener">X (@tulipparty1531)</a> でお知らせします。</p>
   </div>
 </section>
@@ -1832,9 +1860,42 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       }
     }
     // ライブ詳細ビュー: 現在のURL(次回 or 特定ライブID)に応じて反映
+    renderUpcoming(gigs, pick);
     fillDetailFromRoute();
     if (window.ScrollTrigger && window.ScrollTrigger.refresh){ try { window.ScrollTrigger.refresh(); } catch(e){} }
   };
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  // 今後のライブ一覧(次回ヒーローを除いた残りの予定)
+  function renderUpcoming(gigs, pick){
+    var box = document.getElementById('live-list');
+    if (!box) return;
+    var today = new Date(new Date().toDateString()).getTime();
+    var future = (Array.isArray(gigs) ? gigs : [])
+      .map(function(g){ var f = fmtDate(g.date); return f ? { g:g, f:f } : null; })
+      .filter(function(x){ return x && x.f.ts >= today; })
+      .sort(function(a,b){ return a.f.ts - b.f.ts; });
+    var nextId = (pick && pick.g) ? pick.g.id : null;
+    var rest = future.filter(function(x){ return x.g.id !== nextId; });
+    if (!rest.length){ box.innerHTML = ''; box.classList.remove('on'); return; }
+    var html = '<div class="ll-head">Upcoming<span>今後の予定</span></div>';
+    rest.forEach(function(x){
+      var g = x.g, f = x.f, sub = [];
+      if (g.eventTitle && g.eventTitle !== g.venue) sub.push(esc(g.eventTitle));
+      var t = [];
+      if (g.openTime) t.push('OPEN ' + esc(g.openTime));
+      if (g.startTime) t.push('START ' + esc(g.startTime));
+      if (t.length) sub.push(t.join(' / '));
+      if (g.ticketPrice) sub.push('ADV ¥' + Number(g.ticketPrice).toLocaleString('ja-JP'));
+      html += '<article class="ll-item">'
+        + '<div class="ll-date"><b>' + f.y + '.' + f.m + '.' + f.d + '</b><span>' + esc(f.wd) + '</span></div>'
+        + '<div class="ll-body"><h4>' + esc(g.venue || g.eventTitle || 'LIVE') + '</h4>'
+        + (sub.length ? '<p>' + sub.join(' ・ ') + '</p>' : '')
+        + '<a class="ll-btn" href="#live/' + esc(g.id) + '">取り置き・詳細 ↗</a>'
+        + '</div></article>';
+    });
+    box.innerHTML = html;
+    box.classList.add('on');
+  }
   // 詳細ビューの各項目を指定ライブで埋める
   function fillDetailFields(g){
     if (!g) return;
@@ -1854,7 +1915,27 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     if (g.ticketPrice) setApp('adv', '¥' + Number(g.ticketPrice).toLocaleString('ja-JP'));
     setAppRaw('event', g.eventTitle || '');
     setAppRaw('acts', g.acts ? ('w/ ' + g.acts) : '');
+    if (window.tpRenderMap) window.tpRenderMap();
   }
+  // 会場地図(Googleマップ埋め込み): 住所優先・無ければ会場名
+  window.tpRenderMap = function(){
+    var box = document.getElementById('ld-map');
+    if (!box) return;
+    var addrEl = document.querySelector('#live-detail [data-ld="address"]');
+    var placeEl = document.querySelector('#live-detail [data-app="place"]');
+    var q = (addrEl && addrEl.textContent.trim()) || (placeEl && placeEl.textContent.trim()) || '';
+    if (!q){ box.innerHTML = ''; box.classList.remove('on'); return; }
+    var src = 'https://maps.google.com/maps?q=' + encodeURIComponent(q) + '&z=15&output=embed';
+    box.innerHTML = '<iframe loading="lazy" title="会場マップ" frameborder="0" style="width:100%;height:200px;border:0;border-radius:12px" referrerpolicy="no-referrer-when-downgrade" src="' + src + '"></iframe>';
+    box.classList.add('on');
+  };
+  (function(){
+    function wire(){
+      var a = document.querySelector('#live-detail [data-ld="address"]');
+      if (a && !a._mapWired){ a._mapWired = true; a.addEventListener('blur', function(){ if (window.tpRenderMap) window.tpRenderMap(); }); }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
+  })();
   // window.tpFillDetail(gigId) — gigId指定なら該当ライブ、null/未指定なら次回ライブ
   window.tpFillDetail = function(gigId){
     var gigs = LAST_GIGS;
@@ -2196,8 +2277,12 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       }
       var od = document.querySelector('#live-detail .ld-onedrink');
       if (od) od.classList.toggle('ld-empty', !od.textContent.trim());
+      // 会場マップ(住所反映後に再描画)
+      if (window.tpRenderMap) window.tpRenderMap();
       // 7) LISTEN等のリンク
       if (data.playLinks && window.tpApplyPlayLinks) window.tpApplyPlayLinks(data.playLinks);
+      // 8) Apple Music 試聴埋め込み
+      if (window.tpApplyApple) window.tpApplyApple(data.appleMusic || {});
       // リフロー系(ScrollTrigger)に変更を知らせる
       if (window.ScrollTrigger && window.ScrollTrigger.refresh){ try { window.ScrollTrigger.refresh(); } catch(e){} }
     } catch(e){ /* 適用失敗は無視(サイトは素のHTMLで表示) */ }
@@ -2246,6 +2331,55 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     function init(){ setupKeys(); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
+  })();
+
+  /* ===== ディスコグラフィ Apple Music 試聴埋め込み ===== */
+  (function(){
+    function albums(){ return Array.prototype.slice.call(document.querySelectorAll('#h-track .album')); }
+    function toEmbed(u){
+      u = (u || '').trim(); if (!u) return '';
+      if (/embed\.music\.apple\.com/i.test(u)) return u;
+      if (/music\.apple\.com/i.test(u)) return u.replace(/^(https?:\/\/)?(www\.)?music\.apple\.com/i, 'https://embed.music.apple.com');
+      return '';
+    }
+    function render(card){
+      var url = card.getAttribute('data-am-url') || '';
+      var slot = card.querySelector('.am-embed');
+      if (!slot){ slot = document.createElement('div'); slot.className = 'am-embed'; card.appendChild(slot); }
+      var src = toEmbed(url);
+      slot.innerHTML = src ? '<iframe loading="lazy" allow="autoplay *; encrypted-media *;" frameborder="0" height="175" style="width:100%;max-width:100%;overflow:hidden;border-radius:12px;background:transparent" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation" src="' + src + '"></iframe>' : '';
+    }
+    function number(){
+      albums().forEach(function(c, i){
+        if (c.getAttribute('data-am') == null) c.setAttribute('data-am', String(i));
+        if (!c.querySelector('.am-embed')){ var s = document.createElement('div'); s.className = 'am-embed'; c.appendChild(s); }
+        if (!c.querySelector('.am-edit')){
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'am-edit'; b.textContent = '♪ 試聴を設定 (Apple Music)';
+          b.addEventListener('click', function(e){
+            e.preventDefault(); e.stopPropagation();
+            var cur = c.getAttribute('data-am-url') || '';
+            var u = window.prompt('Apple Music の作品URLを貼ってください（曲またはアルバムのリンク）。空にすると削除。', cur);
+            if (u == null) return;
+            c.setAttribute('data-am-url', u.trim());
+            render(c);
+            if (window.tpMarkDirty) window.tpMarkDirty();
+          });
+          c.appendChild(b);
+        }
+      });
+    }
+    window.tpApplyApple = function(map){
+      number();
+      if (map && typeof map === 'object'){ albums().forEach(function(c){ var k = c.getAttribute('data-am'); if (k != null && map[k] != null) c.setAttribute('data-am-url', map[k]); }); }
+      albums().forEach(render);
+    };
+    window.tpCollectApple = function(){
+      number(); var out = {};
+      albums().forEach(function(c){ var k = c.getAttribute('data-am'); if (k != null) out[k] = c.getAttribute('data-am-url') || ''; });
+      return out;
+    };
+    function init(){ number(); albums().forEach(render); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   })();
 
   /* ---- 起動: 設定があれば購読開始 ---- */
@@ -2335,7 +2469,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       liveDetail[el.getAttribute('data-ld')] = el.innerHTML;
     });
     var playLinks = (window.tpCollectPlayLinks ? window.tpCollectPlayLinks() : {});
-    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, liveDetail: liveDetail, playLinks: playLinks };
+    var appleMusic = (window.tpCollectApple ? window.tpCollectApple() : {});
+    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, liveDetail: liveDetail, playLinks: playLinks, appleMusic: appleMusic };
   }
 
   /* ---- Firestore へ保存(全員に共有) ---- */
@@ -2360,6 +2495,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         news: data.news || [],
         liveDetail: data.liveDetail || {},
         playLinks: data.playLinks || {},
+        appleMusic: data.appleMusic || {},
         _client: CLIENT,
         _ts: Date.now()
       });
@@ -2509,6 +2645,12 @@ if ('serviceWorker' in navigator) {
     </div>
     <p class="ld-onedrink" data-ld="onedrink">＋1ドリンク（¥600）別途必要</p>
     <div class="ld-acts" data-app="acts"></div>
+
+    <div class="ld-access">
+      <span class="ld-acclabel">Access<span class="lab-jp">会場アクセス</span></span>
+      <div class="ld-addr" data-ld="address"></div>
+      <div class="ld-map" id="ld-map"></div>
+    </div>
 
     <div class="ld-res">
       <h4>取り置き予約 / RESERVATION</h4>
