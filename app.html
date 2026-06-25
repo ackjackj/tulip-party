@@ -24,12 +24,15 @@ input,textarea,button{font-family:inherit}
 .sc-root{position:fixed;inset:0;z-index:1000;background:#000;color:#fff;overflow:hidden}
 .sc-bg{position:absolute;inset:-10%;background:radial-gradient(60% 50% at 50% 18%,rgba(255,30,60,.24),transparent 62%),radial-gradient(55% 45% at 85% 100%,rgba(255,30,60,.12),transparent 60%),#050506;animation:scGlow 10s ease-in-out infinite alternate;z-index:0}
 @keyframes scGlow{0%{transform:scale(1) translate(0,0);filter:brightness(1)}100%{transform:scale(1.08) translate(-1.5%,1%);filter:brightness(1.16)}}
-.sc-particles{position:absolute;inset:0;overflow:hidden;z-index:1;pointer-events:none}
+.sc-video{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.sc-video iframe{position:absolute;top:50%;left:50%;width:max(100vw,177.78vh);height:max(56.25vw,100vh);transform:translate(-50%,-50%);border:0}
+.sc-veil{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(5,5,6,.5),rgba(5,5,6,.62) 55%,rgba(5,5,6,.84));transition:opacity .9s ease}
+.sc-particles{position:absolute;inset:0;overflow:hidden;z-index:2;pointer-events:none}
 .sc-dot{position:absolute;bottom:-12px;width:4px;height:4px;border-radius:999px;background:rgba(255,70,100,.55);box-shadow:0 0 8px rgba(255,30,60,.6);animation:scFloat linear infinite}
 @keyframes scFloat{0%{transform:translateY(0);opacity:0}12%{opacity:1}100%{transform:translateY(-112vh);opacity:0}}
 .sc-prog{position:absolute;top:0;left:0;height:4px;width:0;background:linear-gradient(90deg,#c4122e,#ff1e3c,#ff5470);box-shadow:0 0 12px rgba(255,30,60,.6);z-index:9;animation:scProg linear forwards}
 @keyframes scProg{from{width:0}to{width:100%}}
-.sc-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8vh 7vw;z-index:2}
+.sc-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8vh 7vw;z-index:3}
 .sc-e-zoom{animation:scEzoom .95s cubic-bezier(.2,.7,.2,1) both}
 .sc-e-up{animation:scEup .8s cubic-bezier(.2,.8,.2,1) both}
 .sc-e-right{animation:scEright .82s cubic-bezier(.2,.8,.2,1) both}
@@ -17382,7 +17385,7 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose })
     if (next) slides.push({ type: "next", dur: 12000 });
     if (future.length > 1) slides.push({ type: "upcoming", dur: 10000 });
     goods.forEach((p) => slides.push({ type: "merch", dur: 8000, p }));
-    if (vid) slides.push({ type: "video", dur: 32000 });
+    if (vid) slides.push({ type: "video", dur: 16000 });
     slides.push({ type: "follow", dur: 9000 });
     const n = slides.length;
     const cur = slides[i % n];
@@ -17447,7 +17450,8 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose })
                 info);
         }
         if (s.type === "video") {
-            return React.createElement("iframe", { title: "video", src: "https://www.youtube.com/embed/" + vid + "?autoplay=1&mute=1&loop=1&playlist=" + vid + "&controls=0&modestbranding=1&playsinline=1&rel=0", allow: "autoplay; encrypted-media", frameBorder: "0", style: { position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 } });
+            return React.createElement("div", { className: "sc-mid" },
+                React.createElement("div", { style: { fontFamily: MONO, letterSpacing: ".42em", fontSize: "clamp(11px,1.9vw,16px)", color: "rgba(255,255,255,.92)", textShadow: "0 2px 20px rgba(0,0,0,.8)" } }, "\u25B6 MUSIC VIDEO"));
         }
         // follow
         const link = base || siteUrl || "";
@@ -17464,6 +17468,9 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose })
     }
     return React.createElement("div", { className: "sc-root" },
         React.createElement("div", { className: "sc-bg" }),
+        vid ? React.createElement("div", { className: "sc-video", "aria-hidden": "true" },
+            React.createElement("iframe", { title: "bg-video", src: "https://www.youtube.com/embed/" + vid + "?autoplay=1&mute=1&loop=1&playlist=" + vid + "&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0", allow: "autoplay; encrypted-media" })) : null,
+        vid ? React.createElement("div", { className: "sc-veil", style: { opacity: (cur && cur.type === "video") ? 0.22 : 1 } }) : null,
         React.createElement("div", { className: "sc-particles", "aria-hidden": "true" }, Array.from({ length: 24 }).map((_, k) => React.createElement("span", { key: k, className: "sc-dot", style: { left: ((k * 4.17) % 100).toFixed(1) + "%", width: (3 + (k % 3)) + "px", height: (3 + (k % 3)) + "px", animationDuration: (6 + (k % 6) * 1.6) + "s", animationDelay: (-(k * 0.55)).toFixed(1) + "s" } }))),
         React.createElement("div", { className: "sc-prog", key: "p" + i, style: { animationDuration: ((cur && cur.dur) || 8000) + "ms" } }),
         React.createElement("div", { className: "sc-slide " + ["sc-e-zoom", "sc-e-up", "sc-e-right", "sc-e-fade"][i % 4], key: i }, renderSlide(cur)),
