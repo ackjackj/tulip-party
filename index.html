@@ -1933,7 +1933,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     if (qrBox){
       var url = location.origin + location.pathname + '#live/' + g.id;
       qrBox.innerHTML = '<div class="ld-qr-cap">この画面をスマホで読み取って取り置き</div>'
-        + '<img src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=10&data=' + encodeURIComponent(url) + '" alt="取り置きQR" loading="lazy">'
+        + '<img src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=2&data=' + encodeURIComponent(url) + '" alt="取り置きQR" loading="lazy">'
         + '<div class="ld-qr-sub">SCAN TO RESERVE</div>';
     }
     // 他の今後のライブ
