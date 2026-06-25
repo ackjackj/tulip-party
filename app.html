@@ -18275,6 +18275,16 @@ function Reserve({ reservations, setReservations, hpRes = [], hpAll = [], accept
         React.createElement("button", { onClick: () => { if (!promoLink) { flash && flash("先に設定でサイトURLを入力してください"); return; } setQrOpen(true); }, style: { width: "100%", height: 46, marginBottom: 12, borderRadius: 12, border: `1px solid ${COL.line}`, background: COL.panel2, color: COL.text, fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" } },
             React.createElement(Ic, { name: "QrCode", size: 16 }),
             "QRコードを表示"),
+        React.createElement("button", { onClick: () => {
+            const base = (siteUrl || "").trim().replace(/#.*$/, "");
+            if (!base) { flash && flash("先に設定でサイトURLを入力してください"); return; }
+            const link = (base.endsWith(".html") || base.endsWith("/")) ? base + "#thanks" : base + "/#thanks";
+            const ok = () => flash && flash("お礼ページのリンクをコピーしました（来場者に送れます）");
+            try { navigator.clipboard.writeText(link).then(ok, () => { window.prompt("コピーして送ってください", link); }); }
+            catch (e) { window.prompt("コピーして送ってください", link); }
+        }, style: { width: "100%", height: 46, marginBottom: 12, borderRadius: 12, border: `1px solid ${COL.line}`, background: COL.panel2, color: COL.text, fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" } },
+            React.createElement("span", null, "💌"),
+            "お礼ページのリンクをコピー"),
         qrOpen && React.createElement("div", { onClick: () => setQrOpen(false), style: { position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.88)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 } },
             React.createElement("div", { style: { fontWeight: 800, fontSize: 14, color: "#fff", letterSpacing: ".04em" } }, "取り置きページ QRコード"),
             React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { background: "#fff", padding: 14, borderRadius: 16, lineHeight: 0 } },
