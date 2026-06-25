@@ -17367,7 +17367,7 @@ function ScCountUp({ value, dur, prefix }) {
     }, [value]);
     return (prefix || "") + v.toLocaleString("ja-JP");
 }
-function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose }) {
+function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, showcaseBgVideo, onClose }) {
     const [i, setI] = useState(0);
     const DISPF = "'Unbounded','Zen Kaku Gothic New',sans-serif";
     const MONO = "ui-monospace,'SF Mono',Menlo,monospace";
@@ -17377,7 +17377,8 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose })
     const next = future[0] ? future[0].g : null;
     const base = (siteUrl || "").trim().replace(/#.*$/, "");
     const liveLink = (id) => !base ? "" : ((base.endsWith(".html") || base.endsWith("/")) ? base + "#live/" + id : base + "/#live/" + id);
-    const vid = scYtId(showcaseVideo);
+    const mvVid = scYtId(showcaseVideo);
+    const bgVid = scYtId(showcaseBgVideo);
     const goods = (products || []).filter((p) => p && p.name);
     // スライド構成
     const slides = [];
@@ -17385,7 +17386,7 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose })
     if (next) slides.push({ type: "next", dur: 12000 });
     if (future.length > 1) slides.push({ type: "upcoming", dur: 10000 });
     goods.forEach((p) => slides.push({ type: "merch", dur: 8000, p }));
-    if (vid) slides.push({ type: "video", dur: 16000 });
+    if (mvVid) slides.push({ type: "video", dur: 16000 });
     slides.push({ type: "follow", dur: 9000 });
     const n = slides.length;
     const cur = slides[i % n];
@@ -17450,8 +17451,7 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose })
                 info);
         }
         if (s.type === "video") {
-            return React.createElement("div", { className: "sc-mid" },
-                React.createElement("div", { style: { fontFamily: MONO, letterSpacing: ".42em", fontSize: "clamp(11px,1.9vw,16px)", color: "rgba(255,255,255,.92)", textShadow: "0 2px 20px rgba(0,0,0,.8)" } }, "\u25B6 MUSIC VIDEO"));
+            return React.createElement("iframe", { title: "mv", src: "https://www.youtube.com/embed/" + mvVid + "?autoplay=1&mute=1&loop=1&playlist=" + mvVid + "&controls=0&modestbranding=1&playsinline=1&rel=0", allow: "autoplay; encrypted-media", frameBorder: "0", style: { position: "absolute", inset: "5%", width: "90%", height: "90%", border: 0, borderRadius: 16 } });
         }
         // follow
         const link = base || siteUrl || "";
@@ -17468,9 +17468,9 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, onClose })
     }
     return React.createElement("div", { className: "sc-root" },
         React.createElement("div", { className: "sc-bg" }),
-        vid ? React.createElement("div", { className: "sc-video", "aria-hidden": "true" },
-            React.createElement("iframe", { title: "bg-video", src: "https://www.youtube.com/embed/" + vid + "?autoplay=1&mute=1&loop=1&playlist=" + vid + "&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0", allow: "autoplay; encrypted-media" })) : null,
-        vid ? React.createElement("div", { className: "sc-veil", style: { opacity: (cur && cur.type === "video") ? 0.22 : 1 } }) : null,
+        bgVid ? React.createElement("div", { className: "sc-video", style: { opacity: (cur && cur.type === "next") ? 1 : 0, transition: "opacity .8s ease" }, "aria-hidden": "true" },
+            React.createElement("iframe", { title: "bg-video", src: "https://www.youtube.com/embed/" + bgVid + "?autoplay=1&mute=1&loop=1&playlist=" + bgVid + "&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0", allow: "autoplay; encrypted-media" })) : null,
+        bgVid ? React.createElement("div", { className: "sc-veil", style: { opacity: (cur && cur.type === "next") ? 1 : 0 } }) : null,
         React.createElement("div", { className: "sc-particles", "aria-hidden": "true" }, Array.from({ length: 24 }).map((_, k) => React.createElement("span", { key: k, className: "sc-dot", style: { left: ((k * 4.17) % 100).toFixed(1) + "%", width: (3 + (k % 3)) + "px", height: (3 + (k % 3)) + "px", animationDuration: (6 + (k % 6) * 1.6) + "s", animationDelay: (-(k * 0.55)).toFixed(1) + "s" } }))),
         React.createElement("div", { className: "sc-prog", key: "p" + i, style: { animationDuration: ((cur && cur.dur) || 8000) + "ms" } }),
         React.createElement("div", { className: "sc-slide " + ["sc-e-zoom", "sc-e-up", "sc-e-right", "sc-e-fade"][i % 4], key: i }, renderSlide(cur)),
@@ -17487,7 +17487,8 @@ function App() {
     const C = CACHED || {};
     const [bandName, setBandName] = useState(C.bandName || "tulip party");
     const [siteUrl, setSiteUrl] = useState(C.siteUrl || "");
-    const [showcaseVideo, setShowcaseVideo] = useState(C.showcaseVideo || ""); // ショーケース用 YouTube URL
+    const [showcaseVideo, setShowcaseVideo] = useState(C.showcaseVideo || ""); // MV用(専用スライド)
+    const [showcaseBgVideo, setShowcaseBgVideo] = useState(C.showcaseBgVideo || ""); // 背景用(取り置きページ背面)
     const [sendEmail, setSendEmail] = useState(C.sendEmail || ""); // メンバー共有の送信用アドレス
     const [sentLog, setSentLog] = useState(C.sentLog || {}); // { [gigId]: { [contactKey]: ts } } 送信済み(ライブ別)
     const [members, setMembers] = useState(C.members || MEMBERS);
@@ -17521,6 +17522,8 @@ function App() {
             setSiteUrl(d.siteUrl);
         if (d.showcaseVideo !== undefined)
             setShowcaseVideo(d.showcaseVideo);
+        if (d.showcaseBgVideo !== undefined)
+            setShowcaseBgVideo(d.showcaseBgVideo);
         if (d.sendEmail !== undefined)
             setSendEmail(d.sendEmail);
         if (d.sentLog !== undefined)
@@ -17611,7 +17614,7 @@ function App() {
     }, [syncCfg]);
     // ---- 保存（スマホ内 + 共有中ならクラウド） ----
     useEffect(() => {
-        const d = { bandName, siteUrl, showcaseVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
+        const d = { bandName, siteUrl, showcaseVideo, showcaseBgVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
         payloadRef.current = d;
         try {
             localStorage.setItem("tp-data", JSON.stringify(d));
@@ -17631,7 +17634,7 @@ function App() {
             f.fsM.setDoc(f.ref, { ...payloadRef.current, _client: CLIENT_ID, _ts: Date.now() }).catch(() => { });
         }, 600);
         return () => clearTimeout(saveTimer.current);
-    }, [bandName, siteUrl, showcaseVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
+    }, [bandName, siteUrl, showcaseVideo, showcaseBgVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
     // ---- メンバーとステージ図の同期 ----
     useEffect(() => {
         setStageItems((prev) => {
@@ -17739,7 +17742,7 @@ function App() {
         React.createElement("div", { style: { position: "fixed", inset: 0, background: "radial-gradient(60% 45% at 50% 0%, rgba(255,30,60,.14), transparent 70%), radial-gradient(50% 40% at 85% 100%, rgba(255,30,60,.05), transparent 70%)", pointerEvents: "none" } }),
         React.createElement("div", { style: { position: "relative", maxWidth: 560, margin: "0 auto", paddingTop: "calc(14px + env(safe-area-inset-top))", paddingBottom: "calc(120px + env(safe-area-inset-bottom))" } },
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
-            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
+            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, showcaseBgVideo, setShowcaseBgVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
             screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, hpAll: hpRes, acceptHp, dismissHp, deleteHpDoc, siteUrl, sentForGig: (sentLog[currentGigId] || {}), markSent, sendEmail }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash, onShowcase: () => setShowcase(true) }),
@@ -17750,7 +17753,7 @@ function App() {
                 React.createElement(Ic, { name: ic, size: 20 }),
                 l))))),
         toast && React.createElement("div", { className: "rise", style: { position: "fixed", left: 20, right: 20, bottom: "calc(86px + env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto", background: COL.mint, color: "#06281d", padding: "12px 16px", borderRadius: 14, fontWeight: 800, fontSize: 13, textAlign: "center", zIndex: 30 } }, toast),
-        showcase && React.createElement(Showcase, { bandName, siteUrl, gigs, products, showcaseVideo, onClose: () => setShowcase(false) })));
+        showcase && React.createElement(Showcase, { bandName, siteUrl, gigs, products, showcaseVideo, showcaseBgVideo, onClose: () => setShowcase(false) })));
 }
 const Card = ({ children, style }) => React.createElement("div", { className: "rise", style: { background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 18, padding: 16, ...style } }, children);
 const Label = ({ children }) => React.createElement("div", { style: { fontSize: 11, letterSpacing: 1.2, color: COL.sub, fontWeight: 800 } }, children);
@@ -17844,7 +17847,7 @@ function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, need
             "\u30AA\u30D5\u30A3\u30B7\u30E3\u30EB\u30B5\u30A4\u30C8\u3092\u958B\u304F"))));
 }
 // ===================== SETTINGS =====================
-function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
+function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, showcaseBgVideo, setShowcaseBgVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
     const [cfgText, setCfgText] = useState("");
     const upd = (id, patch) => setMembers((p) => p.map((m) => m.id === id ? { ...m, ...patch } : m));
     const cycleColor = (id, cur) => { const i = MEMBER_COLORS.indexOf(cur); upd(id, { color: MEMBER_COLORS[(i + 1) % MEMBER_COLORS.length] }); };
@@ -17885,9 +17888,13 @@ function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, 
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4 } }, "\u30B5\u30A4\u30C8\u3092\u516C\u958B\u3057\u305F\u3089URL\u3092\u8CBC\u308B\u3068\u3001\u30DB\u30FC\u30E0\u306B\u300C\u30B5\u30A4\u30C8\u3092\u958B\u304F\u300D\u30DC\u30BF\u30F3\u304C\u51FA\u307E\u3059\u3002"),
             React.createElement("input", { value: siteUrl, onChange: (e) => setSiteUrl(e.target.value), placeholder: "https://...", style: { ...inp, marginTop: 8 } })),
         React.createElement(Card, { style: { marginTop: 12 } },
-            React.createElement(Label, null, "\u30B7\u30E7\u30FC\u30B1\u30FC\u30B9\u52D5\u753B\uFF08YouTube\uFF09"),
-            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u7269\u8CA9\u30E2\u30FC\u30C9\u3067\u6D41\u3059\u52D5\u753B\u306EYouTube URL\u3092\u8CBC\u308A\u4ED8\u3051\u3002\u30E9\u30A4\u30D6\u6620\u50CF\u3084MV\u306A\u3069\u3002\u7A7A\u306E\u5834\u5408\u306F\u52D5\u753B\u30B9\u30E9\u30A4\u30C9\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093\u3002"),
+            React.createElement(Label, null, "\u30B7\u30E7\u30FC\u30B1\u30FC\u30B9\u52D5\u753B\uFF08MV\u7528\uFF09"),
+            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "MV\u30FB\u30E9\u30A4\u30D6\u6620\u50CF\u306A\u3069\u3092\u300C1\u679A\u306E\u6620\u50CF\u30B9\u30E9\u30A4\u30C9\u300D\u3068\u3057\u3066\u5168\u753B\u9762\u8868\u793A\u3002\u7A7A\u306A\u3089\u8868\u793A\u3055\u308C\u307E\u305B\u3093\u3002"),
             React.createElement("input", { value: showcaseVideo, onChange: (e) => setShowcaseVideo(e.target.value), placeholder: "https://youtu.be/...", autoCapitalize: "none", style: { ...inp, marginTop: 8 } })),
+        React.createElement(Card, { style: { marginTop: 12 } },
+            React.createElement(Label, null, "\u30B7\u30E7\u30FC\u30B1\u30FC\u30B9\u52D5\u753B\uFF08\u80CC\u666F\u7528\uFF09"),
+            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u53D6\u308A\u7F6E\u304D\u30DA\u30FC\u30B8\uFF08NEXT LIVE\uFF09\u306E\u80CC\u9762\u3060\u3051\u3067\u30EB\u30FC\u30D7\u518D\u751F\u3002\u305D\u308C\u4EE5\u5916\u306E\u30B9\u30E9\u30A4\u30C9\u306F\u4ECA\u307E\u3067\u901A\u308A\u3002\u7A7A\u306A\u3089\u80CC\u666F\u52D5\u753B\u306A\u3057\u3002"),
+            React.createElement("input", { value: showcaseBgVideo, onChange: (e) => setShowcaseBgVideo(e.target.value), placeholder: "https://youtu.be/...", autoCapitalize: "none", style: { ...inp, marginTop: 8 } })),
         React.createElement(Card, { style: { marginTop: 12 } },
             React.createElement(Label, null, "\u9001\u4FE1\u7528\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\uFF08\u5171\u6709\uFF09"),
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u30D0\u30F3\u30C9\u5C02\u7528\u306E\u7121\u6599\u30E1\u30FC\u30EB\uFF08Gmail\u7B49\uFF09\u3092\u4F5C\u3063\u3066\u3053\u3053\u306B\u5165\u308C\u308B\u3068\u3001\u30E1\u30F3\u30D0\u30FC\u5168\u54E1\u3067\u5171\u6709\u3055\u308C\u307E\u3059\u3002\u3053\u306E\u30A2\u30C9\u30EC\u30B9\u3092\u5404\u81EA\u306E\u30E1\u30FC\u30EB\u30A2\u30D7\u30EA\u306B\u8FFD\u52A0\u3057\u3066\u304A\u304F\u3068\u3001\u9001\u4FE1\u5143\u3092\u63C3\u3048\u3089\u308C\u307E\u3059\u3002"),
