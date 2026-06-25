@@ -393,6 +393,18 @@ body.editing .ld-addr:empty{display:block;min-height:1.2em;opacity:.5}
 .ld-map{margin:10px 0 0}
 .ld-map:empty{display:none}
 .ld-map iframe{display:block;filter:grayscale(.25) contrast(1.05)}
+.ld-qr{display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 18px;padding:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px}
+.ld-qr img{width:170px;height:170px;background:#fff;padding:8px;border-radius:10px;display:block}
+.ld-qr-cap{font-size:12px;color:var(--txt);letter-spacing:.04em;text-align:center}
+.ld-qr-sub{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--red)}
+.ld-more{display:none;margin-top:22px}
+.ld-more.on{display:block}
+.ld-more-h{font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--txt3);margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.08)}
+.ld-more-row{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid rgba(255,255,255,.06);text-decoration:none;color:inherit}
+.ld-more-date{font-family:var(--mono);font-size:13px;color:#fff;min-width:88px}
+.ld-more-venue{flex:1 1 auto;font-size:13px;font-weight:700;color:var(--txt)}
+.ld-more-arrow{color:var(--red);font-size:20px;line-height:1}
+@media(hover:hover){.ld-more-row:hover .ld-more-venue{color:#fff}}
 .ld-flyer-wrap{margin:26px 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#0c0c0e}
 .ld-flyer{display:block;width:100%;height:auto;min-height:220px;object-fit:cover;background:#0c0c0e}
 .ld-flyer-ph{pointer-events:none}
@@ -1916,6 +1928,34 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     setAppRaw('event', g.eventTitle || '');
     setAppRaw('acts', g.acts ? ('w/ ' + g.acts) : '');
     if (window.tpRenderMap) window.tpRenderMap();
+    // 取り置きQR(この画面をスマホで読み取って予約)
+    var qrBox = document.getElementById('ld-qr');
+    if (qrBox){
+      var url = location.origin + location.pathname + '#live/' + g.id;
+      qrBox.innerHTML = '<div class="ld-qr-cap">この画面をスマホで読み取って取り置き</div>'
+        + '<img src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=10&data=' + encodeURIComponent(url) + '" alt="取り置きQR" loading="lazy">'
+        + '<div class="ld-qr-sub">SCAN TO RESERVE</div>';
+    }
+    // 他の今後のライブ
+    var moreBox = document.getElementById('ld-more');
+    if (moreBox){
+      var gigs = (typeof LAST_GIGS !== 'undefined' && Array.isArray(LAST_GIGS)) ? LAST_GIGS : [];
+      var today = new Date(new Date().toDateString()).getTime();
+      var others = gigs.map(function(x){ var ff = fmtDate(x.date); return ff ? { g:x, f:ff } : null; })
+        .filter(function(x){ return x && x.f.ts >= today && x.g.id !== g.id; })
+        .sort(function(a,b){ return a.f.ts - b.f.ts; });
+      if (!others.length){ moreBox.innerHTML = ''; moreBox.classList.remove('on'); }
+      else {
+        var h = '<div class="ld-more-h">他の今後のライブ</div>';
+        others.forEach(function(x){
+          h += '<a class="ld-more-row" href="#live/' + esc(x.g.id) + '">'
+            + '<span class="ld-more-date">' + x.f.y + '.' + x.f.m + '.' + x.f.d + '</span>'
+            + '<span class="ld-more-venue">' + esc(x.g.venue || x.g.eventTitle || 'LIVE') + '</span>'
+            + '<span class="ld-more-arrow">›</span></a>';
+        });
+        moreBox.innerHTML = h; moreBox.classList.add('on');
+      }
+    }
   }
   // 会場地図(Googleマップ埋め込み): 住所優先・無ければ会場名
   window.tpRenderMap = function(){
@@ -2654,6 +2694,7 @@ if ('serviceWorker' in navigator) {
 
     <div class="ld-res">
       <h4>取り置き予約 / RESERVATION</h4>
+      <div class="ld-qr" id="ld-qr"></div>
       <p class="note">当日精算の取り置き予約です。下記を送信してください。料金は当日受付でお支払いください。</p>
       <div class="ld-field"><label for="ld-name">お名前</label><input id="ld-name" type="text" autocomplete="name" placeholder="山田 太郎"></div>
       <div class="ld-field"><label for="ld-count">枚数</label><input id="ld-count" type="number" min="1" max="20" value="1" inputmode="numeric"></div>
@@ -2661,6 +2702,7 @@ if ('serviceWorker' in navigator) {
       <button class="ld-submit" id="ld-submit" type="button">この内容で予約する</button>
       <div class="ld-msg" id="ld-msg" role="status" aria-live="polite"></div>
     </div>
+    <div class="ld-more" id="ld-more"></div>
   </div>
 </div>
 
