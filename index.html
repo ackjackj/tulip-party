@@ -415,7 +415,7 @@ body.editing .ld-addr:empty{display:block;min-height:1.2em;opacity:.5}
 .lj-qr{margin:20px auto 0;width:max-content;background:#fff;padding:12px;border-radius:14px}
 .lj-qr img{width:180px;height:180px;display:block}
 .lj-cap{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--txt3);margin-top:12px}
-.lj-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;padding:14px 28px;border-radius:12px;background:#06C755;color:#fff;text-decoration:none;font-weight:800;font-size:14px;transition:transform .15s ease}
+.lj-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;margin-top:22px;padding:15px 32px;border-radius:12px;background:#06C755;color:#fff;text-decoration:none;font-weight:800;font-size:15px;transition:transform .15s ease}
 .lj-btn:active{transform:scale(.98)}
 .lj-hint{font-size:12px;color:var(--txt3);line-height:1.7}
 .foot .sns a.line-foot{display:none;cursor:pointer}
@@ -3167,8 +3167,6 @@ if ('serviceWorker' in navigator) {
           + '<div class="lj-kicker">JOIN OUR LINE</div>'
           + '<div class="lj-title">LINEで友だち追加</div>'
           + '<div class="lj-sub">次回ライブ・取り置きの先行案内、新曲・限定情報をLINEで配信中。</div>'
-          + '<div class="lj-qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=0&data=' + encodeURIComponent(LINE_URL) + '" alt="LINE友だち追加QR" loading="lazy"></div>'
-          + '<div class="lj-cap">スマホでスキャン / ボタンでも追加</div>'
           + '<a class="lj-btn" href="' + esc(LINE_URL) + '" target="_blank" rel="noopener">' + lineIcon + '<span>LINEで友だち追加</span></a>'
           + '</div>';
         joinEl.style.display = '';
