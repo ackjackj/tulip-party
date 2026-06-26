@@ -406,14 +406,14 @@ body.editing .ld-addr:empty{display:block;min-height:1.2em;opacity:.5}
 .ld-more-arrow{color:var(--red);font-size:20px;line-height:1}
 @media(hover:hover){.ld-more-row:hover .ld-more-venue{color:#fff}}
 /* ---- THANKS CARD ---- */
-.line-foot{display:none;cursor:pointer}
-body.editing .line-foot{display:inline-flex !important;outline:1px dashed rgba(6,199,85,.8);outline-offset:3px;border-radius:6px}
+.foot .sns a.line-foot{display:none;cursor:pointer}
+body.editing .foot .sns a.line-foot{display:inline-flex;outline:1px dashed rgba(6,199,85,.8);outline-offset:3px;border-radius:6px}
 .tk-line{margin:24px auto 0;max-width:420px}
 .tk-line:empty{display:none}
 .tk-line-btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:15px;border-radius:14px;background:#06C755;color:#fff;text-decoration:none;font-weight:800;font-size:14px;letter-spacing:.02em;transition:transform .15s ease}
 .tk-line-btn:active{transform:scale(.98)}
-.tk-foot-link{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--red);text-decoration:none;border:1px dashed rgba(255,30,60,.5);padding:4px 8px;border-radius:6px}
-body.editing .tk-foot-link{display:inline-block}
+.foot .sns a.tk-foot-link{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--red);text-decoration:none;border:1px dashed rgba(255,30,60,.5);padding:4px 8px;border-radius:6px}
+body.editing .foot .sns a.tk-foot-link{display:inline-block}
 #thanks-page{position:fixed;inset:0;z-index:200;background:#070406;overflow-y:auto;opacity:0;transition:opacity .32s ease;-webkit-overflow-scrolling:touch}
 #thanks-page.open{opacity:1}
 #thanks-page::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(60% 40% at 50% 12%,rgba(255,30,60,.18),transparent 60%)}
