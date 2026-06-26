@@ -406,6 +406,12 @@ body.editing .ld-addr:empty{display:block;min-height:1.2em;opacity:.5}
 .ld-more-arrow{color:var(--red);font-size:20px;line-height:1}
 @media(hover:hover){.ld-more-row:hover .ld-more-venue{color:#fff}}
 /* ---- THANKS CARD ---- */
+.line-foot{display:none;cursor:pointer}
+body.editing .line-foot{display:inline-flex !important;outline:1px dashed rgba(6,199,85,.8);outline-offset:3px;border-radius:6px}
+.tk-line{margin:24px auto 0;max-width:420px}
+.tk-line:empty{display:none}
+.tk-line-btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:15px;border-radius:14px;background:#06C755;color:#fff;text-decoration:none;font-weight:800;font-size:14px;letter-spacing:.02em;transition:transform .15s ease}
+.tk-line-btn:active{transform:scale(.98)}
 .tk-foot-link{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--red);text-decoration:none;border:1px dashed rgba(255,30,60,.5);padding:4px 8px;border-radius:6px}
 body.editing .tk-foot-link{display:inline-block}
 #thanks-page{position:fixed;inset:0;z-index:200;background:#070406;overflow-y:auto;opacity:0;transition:opacity .32s ease;-webkit-overflow-scrolling:touch}
@@ -423,6 +429,18 @@ body.editing .tk-msg:empty::before{content:"ここにお礼文を入力";color:v
 body.editing .tk-edits{display:flex}
 .tk-edit{padding:8px 12px;border:1px dashed rgba(255,30,60,.5);background:transparent;color:var(--red);font-family:inherit;font-size:11px;letter-spacing:.06em;border-radius:8px;cursor:pointer}
 .tk-gifts{display:flex;flex-direction:column;gap:12px;margin:26px auto 0;max-width:420px}
+.tk-lock{display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 20px;border:1px dashed rgba(255,255,255,.18);border-radius:16px;background:rgba(255,255,255,.02)}
+.tk-lock-ic{font-size:30px}
+.tk-lock-t{font-weight:800;font-size:15px;color:#fff}
+.tk-lock-s{font-size:12px;color:var(--txt);line-height:1.7}
+.tk-lock-in{width:100%;max-width:240px;margin-top:6px;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#0c0a0c;color:#fff;font-size:15px;text-align:center;letter-spacing:.1em}
+.tk-lock-btn{margin-top:4px;padding:12px 22px;border:0;border-radius:10px;background:var(--red);color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+.tk-lock-err{color:var(--red);font-size:12px;min-height:1em}
+.tk-share{display:none;margin:14px auto 0;max-width:460px;text-align:left;padding:14px;border:1px dashed rgba(255,30,60,.5);border-radius:12px}
+body.editing .tk-share{display:block}
+.tk-share-h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--red);margin-bottom:8px}
+.tk-share-url{font-family:var(--mono);font-size:11px;color:var(--txt);word-break:break-all;background:rgba(0,0,0,.35);padding:10px;border-radius:8px}
+.tk-share-copy{margin-top:10px;padding:9px 14px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:inherit;font-size:12px;font-weight:800;border-radius:8px;cursor:pointer}
 .tk-gift{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;border-radius:14px;border:1px solid var(--red);background:linear-gradient(135deg,rgba(255,30,60,.14),rgba(255,30,60,.03));color:#fff;text-decoration:none;font-weight:800;font-size:14px;letter-spacing:.03em;transition:transform .15s ease,box-shadow .25s ease}
 .tk-gift:active{transform:scale(.98)}
 .tk-gift .tk-gift-sub{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--red)}
@@ -1106,6 +1124,7 @@ textarea.news-in{resize:vertical;line-height:1.7}
         <a href="https://x.com/tulipparty1531" target="_blank" rel="noopener" aria-label="X"><svg class="sns-ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.656l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg></a>
         <a href="https://youtube.com/channel/UCAaT5S7hQRTl8FoDAM4rAfg" target="_blank" rel="noopener" aria-label="YouTube"><svg class="sns-ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#FF0000" d="M23.5 6.2a3.02 3.02 0 0 0-2.12-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.38.56A3.02 3.02 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3.02 3.02 0 0 0 2.12 2.14C4.5 20.5 12 20.5 12 20.5s7.5 0 9.38-.56A3.02 3.02 0 0 0 23.5 17.8 31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8z"/><path fill="#ffffff" d="M9.55 15.57V8.43L15.82 12z"/></svg></a>
         <a href="https://music.apple.com/jp/artist/tulip-party/1776440390" target="_blank" rel="noopener" aria-label="Apple Music"><svg class="sns-ic" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="am-g" x1="12" y1="1" x2="12" y2="23" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FB5C74"/><stop offset="1" stop-color="#FA233B"/></linearGradient></defs><path fill="url(#am-g)" d="M17.05 12.04c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.94.94-.81 0-2.07-.92-3.4-.9-1.75.03-3.36 1.02-4.26 2.58-1.82 3.16-.46 7.83 1.3 10.4.86 1.26 1.88 2.67 3.22 2.62 1.29-.05 1.78-.83 3.34-.83 1.55 0 2 .83 3.36.81 1.39-.03 2.27-1.28 3.12-2.55.98-1.46 1.39-2.88 1.41-2.95-.03-.01-2.7-1.04-2.73-4.12zM14.6 4.42c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-2.99 1.54-.66.76-1.23 1.98-1.08 3.15 1.14.09 2.3-.58 3.01-1.44z"/></svg></a>
+        <a class="line-foot" id="line-foot" aria-label="LINE 友だち追加"><svg class="sns-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5.5" fill="#06C755"/><text x="12" y="15.4" font-size="7.3" font-weight="800" text-anchor="middle" fill="#fff" font-family="Arial,Helvetica,sans-serif">LINE</text></svg></a>
         <a class="top-link" href="#hero">TOP ↑</a>
         <a class="tk-foot-link" href="#thanks">お礼ページ ✎</a>
       </div>
@@ -2354,6 +2373,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       if (window.tpApplyApple) window.tpApplyApple(data.appleMusic || {});
       // 9) サンクスカード
       if (window.tpApplyThanks) window.tpApplyThanks(data.thanks || {});
+      // 10) LINE友だち追加
+      if (window.tpApplyLine) window.tpApplyLine(data.lineUrl || '');
       // リフロー系(ScrollTrigger)に変更を知らせる
       if (window.ScrollTrigger && window.ScrollTrigger.refresh){ try { window.ScrollTrigger.refresh(); } catch(e){} }
     } catch(e){ /* 適用失敗は無視(サイトは素のHTMLで表示) */ }
@@ -2542,7 +2563,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     var playLinks = (window.tpCollectPlayLinks ? window.tpCollectPlayLinks() : {});
     var appleMusic = (window.tpCollectApple ? window.tpCollectApple() : {});
     var thanks = (window.tpCollectThanks ? window.tpCollectThanks() : {});
-    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, liveDetail: liveDetail, playLinks: playLinks, appleMusic: appleMusic, thanks: thanks };
+    var lineUrl = (window.tpCollectLine ? window.tpCollectLine() : '');
+    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, liveDetail: liveDetail, playLinks: playLinks, appleMusic: appleMusic, thanks: thanks, lineUrl: lineUrl };
   }
 
   /* ---- Firestore へ保存(全員に共有) ---- */
@@ -2569,6 +2591,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         playLinks: data.playLinks || {},
         appleMusic: data.appleMusic || {},
         thanks: data.thanks || {},
+        lineUrl: data.lineUrl || '',
         _client: CLIENT,
         _ts: Date.now()
       });
@@ -2746,13 +2769,16 @@ if ('serviceWorker' in navigator) {
     <h2 class="tk-title">ご来場ありがとうございました</h2>
     <div class="tk-msg" data-tk="message"></div>
     <div class="tk-edits">
+      <button type="button" class="tk-edit" data-tk-edit="code">🔒 合言葉を設定</button>
       <button type="button" class="tk-edit" data-tk-edit="audio">♪ 限定音源URLを設定</button>
       <button type="button" class="tk-edit" data-tk-edit="wallpaper">🖼 壁紙URLを設定</button>
       <button type="button" class="tk-edit" data-tk-edit="video">▶ お礼動画URLを設定</button>
     </div>
+    <div class="tk-share" id="tk-share"></div>
     <div class="tk-gifts" id="tk-gifts"></div>
     <div class="tk-video" id="tk-video"></div>
     <div class="tk-next" id="tk-next"></div>
+    <div class="tk-line" id="tk-line"></div>
   </div>
 </div>
 
@@ -2954,19 +2980,62 @@ if ('serviceWorker' in navigator) {
   var videoEl = document.getElementById('tk-video');
   var nextEl = document.getElementById('tk-next');
   var closeBtn = page.querySelector('.tk-close');
+  var shareEl = document.getElementById('tk-share');
   var THANKS = {};
+  var manualUnlock = false;
+  function urlCode(){ var h=location.hash||''; if(h.indexOf('#thanks')!==0) return ''; return decodeURIComponent(h.slice(7).replace(/^[=\/]/,'')||''); }
+  function isUnlocked(){ if (isEditing()) return true; if (!THANKS.code) return true; if (manualUnlock) return true; return urlCode() === THANKS.code; }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function normUrl(u){ u=(u||'').trim(); if(!u) return ''; if(/^(https?:\/\/|mailto:|tel:|#)/i.test(u)) return u; return 'https://'+u.replace(/^\/+/,''); }
   function ytId(u){ if(!u) return ''; var m=String(u).match(/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/); return m?m[1]:''; }
   function isEditing(){ return document.body.classList.contains('editing'); }
   function giftBtn(url,label,sub){ return '<a class="tk-gift" href="'+esc(normUrl(url))+'" target="_blank" rel="noopener"><span>'+label+'</span><span class="tk-gift-sub">'+sub+'</span></a>'; }
   function renderGifts(){
+    var hasGifts = !!(THANKS.audioUrl || THANKS.wallpaperUrl || ytId(THANKS.videoUrl||''));
+    if (!isUnlocked()){
+      giftsEl.innerHTML = '<div class="tk-lock">'
+        + '<div class="tk-lock-ic">🔒</div>'
+        + '<div class="tk-lock-t">限定特典は会場に来てくれた人だけ</div>'
+        + '<div class="tk-lock-s">会場で配布・告知された合言葉を入力してください</div>'
+        + '<input class="tk-lock-in" type="text" placeholder="合言葉" autocapitalize="off" autocomplete="off">'
+        + '<button type="button" class="tk-lock-btn">特典をひらく</button>'
+        + '<div class="tk-lock-err"></div></div>';
+      videoEl.innerHTML = '';
+      var inp = giftsEl.querySelector('.tk-lock-in');
+      var btn = giftsEl.querySelector('.tk-lock-btn');
+      var err = giftsEl.querySelector('.tk-lock-err');
+      var tryUnlock = function(){
+        if ((inp.value||'').trim() === THANKS.code){
+          manualUnlock = true;
+          try { history.replaceState(null,'', '#thanks=' + encodeURIComponent(THANKS.code)); } catch(e){}
+          renderGifts();
+        } else { err.textContent = '合言葉が違います'; }
+      };
+      btn.addEventListener('click', tryUnlock);
+      inp.addEventListener('keydown', function(e){ if (e.key==='Enter') tryUnlock(); });
+      return;
+    }
     var html='';
     if (THANKS.audioUrl) html += giftBtn(THANKS.audioUrl,'限定音源をダウンロード','LIMITED AUDIO ↓');
     if (THANKS.wallpaperUrl) html += giftBtn(THANKS.wallpaperUrl,'スマホ壁紙をダウンロード','WALLPAPER ↓');
     giftsEl.innerHTML = html;
     var id = ytId(THANKS.videoUrl||'');
     videoEl.innerHTML = id ? '<iframe loading="lazy" title="お礼動画" allow="encrypted-media" src="https://www.youtube.com/embed/'+id+'?rel=0&playsinline=1&modestbranding=1"></iframe>' : '';
+  }
+  function renderShare(){
+    if (!shareEl) return;
+    if (!isEditing()){ shareEl.innerHTML=''; return; }
+    var base = location.origin + location.pathname + '#thanks';
+    var full = base + (THANKS.code ? ('=' + encodeURIComponent(THANKS.code)) : '');
+    shareEl.innerHTML = '<div class="tk-share-h">配布用URL'
+      + (THANKS.code ? '（合言葉つき）' : '（合言葉なし＝誰でも開けます）') + '</div>'
+      + '<div class="tk-share-url">' + esc(full) + '</div>'
+      + '<button type="button" class="tk-share-copy">このURLをコピー</button>';
+    var cp = shareEl.querySelector('.tk-share-copy');
+    cp.addEventListener('click', function(){
+      try { navigator.clipboard.writeText(full).then(function(){ cp.textContent='コピーしました'; setTimeout(function(){ cp.textContent='このURLをコピー'; },1500); }, function(){ window.prompt('コピーしてください', full); }); }
+      catch(e){ window.prompt('コピーしてください', full); }
+    });
   }
   function renderMsg(){ if (!isEditing() && msgEl) msgEl.textContent = THANKS.message || ''; }
   function renderNext(){
@@ -2980,7 +3049,7 @@ if ('serviceWorker' in navigator) {
       + '<div class="tk-nqr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=0&data='+encodeURIComponent(url)+'" alt="取り置きQR" loading="lazy"></div>'
       + '<div class="tk-nqr-cap">SCAN TO RESERVE</div>';
   }
-  window.tpRenderThanks = function(){ renderGifts(); renderMsg(); renderNext(); };
+  window.tpRenderThanks = function(){ renderGifts(); renderShare(); renderMsg(); renderNext(); };
   window.tpApplyThanks = function(data){ THANKS = (data && typeof data==='object') ? Object.assign({}, data) : {}; window.tpRenderThanks(); };
   window.tpCollectThanks = function(){ if (isEditing() && msgEl) THANKS.message = msgEl.innerText.trim(); return THANKS; };
 
@@ -2988,6 +3057,15 @@ if ('serviceWorker' in navigator) {
     btn.addEventListener('click', function(e){
       e.preventDefault();
       var key = btn.getAttribute('data-tk-edit');
+      if (key === 'code'){
+        var c = window.prompt('合言葉（ライブごとに変えると、前のURLは無効化されます。空で誰でも開けます）', THANKS.code||'');
+        if (c==null) return;
+        THANKS.code = c.trim();
+        manualUnlock = true;
+        renderGifts(); renderShare();
+        if (window.tpMarkDirty) window.tpMarkDirty();
+        return;
+      }
       var prop = { audio:'audioUrl', wallpaper:'wallpaperUrl', video:'videoUrl' }[key];
       var label = key==='audio'?'限定音源のダウンロードURL':key==='wallpaper'?'スマホ壁紙のダウンロードURL':'お礼動画のURL（YouTube）';
       var v = window.prompt(label+'（空にすると削除）', THANKS[prop]||'');
@@ -3008,6 +3086,48 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('hashchange', route);
   closeBtn.addEventListener('click', function(){ if (isThanksRoute()) history.back(); else close(); });
   if (isThanksRoute()) open();
+})();
+</script>
+<script>
+/* ============================================================
+   LINE友だち追加: フッターアイコン + お礼ページボタン
+   ============================================================ */
+(function(){
+  "use strict";
+  var foot = document.getElementById('line-foot');
+  var tkLine = document.getElementById('tk-line');
+  var LINE_URL = '';
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function normUrl(u){ u=(u||'').trim(); if(!u) return ''; if(/^(https?:\/\/|#)/i.test(u)) return u; return 'https://'+u.replace(/^\/+/,''); }
+  function isEditing(){ return document.body.classList.contains('editing'); }
+  var lineIcon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5.5" fill="#fff"/><text x="12" y="15.4" font-size="7.3" font-weight="800" text-anchor="middle" fill="#06C755" font-family="Arial,Helvetica,sans-serif">LINE</text></svg>';
+  function render(){
+    window.TP_LINE_URL = LINE_URL;
+    if (foot){
+      if (LINE_URL){ foot.setAttribute('href', LINE_URL); foot.setAttribute('target','_blank'); foot.setAttribute('rel','noopener'); foot.style.display='inline-flex'; }
+      else { foot.removeAttribute('href'); foot.style.display = isEditing() ? 'inline-flex' : 'none'; }
+    }
+    if (tkLine){
+      tkLine.innerHTML = LINE_URL
+        ? '<a class="tk-line-btn" href="'+esc(LINE_URL)+'" target="_blank" rel="noopener">'+lineIcon+'<span>LINEで友だち追加</span></a>'
+        : '';
+    }
+  }
+  window.tpApplyLine = function(url){ LINE_URL = normUrl(url||''); render(); };
+  window.tpCollectLine = function(){ return LINE_URL; };
+  window.tpRenderLine = render;
+  if (foot){
+    foot.addEventListener('click', function(e){
+      if (!isEditing()) return; // 公開時は通常リンク
+      e.preventDefault();
+      var v = window.prompt('LINE公式アカウントの「友だち追加URL」を貼り付け（例: https://lin.ee/xxxx）。空にすると削除', LINE_URL);
+      if (v==null) return;
+      LINE_URL = normUrl(v.trim());
+      render();
+      if (window.tpMarkDirty) window.tpMarkDirty();
+    });
+  }
+  try { new MutationObserver(render).observe(document.body, { attributes:true, attributeFilter:['class'] }); } catch(e){}
 })();
 </script>
 </body>

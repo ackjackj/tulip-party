@@ -17367,7 +17367,7 @@ function ScCountUp({ value, dur, prefix }) {
     }, [value]);
     return (prefix || "") + v.toLocaleString("ja-JP");
 }
-function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, showcaseBgVideo, onClose }) {
+function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, showcaseBgVideo, lineUrl, onClose }) {
     const [i, setI] = useState(0);
     const DISPF = "'Unbounded','Zen Kaku Gothic New',sans-serif";
     const MONO = "ui-monospace,'SF Mono',Menlo,monospace";
@@ -17387,6 +17387,7 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, showcaseBg
     if (future.length > 1) slides.push({ type: "upcoming", dur: 10000 });
     goods.forEach((p) => slides.push({ type: "merch", dur: 8000, p }));
     if (mvVid) slides.push({ type: "video", dur: 16000 });
+    if (lineUrl) slides.push({ type: "line", dur: 10000 });
     slides.push({ type: "follow", dur: 9000 });
     const n = slides.length;
     const cur = slides[i % n];
@@ -17453,6 +17454,18 @@ function Showcase({ bandName, siteUrl, gigs, products, showcaseVideo, showcaseBg
         if (s.type === "video") {
             return React.createElement("iframe", { title: "mv", src: "https://www.youtube.com/embed/" + mvVid + "?autoplay=1&mute=1&loop=1&playlist=" + mvVid + "&controls=0&modestbranding=1&playsinline=1&rel=0", allow: "autoplay; encrypted-media", frameBorder: "0", style: { position: "absolute", inset: "5%", width: "90%", height: "90%", border: 0, borderRadius: 16 } });
         }
+        if (s.type === "line") {
+            return React.createElement("div", { className: "sc-split" },
+                React.createElement("div", { style: { flex: "1 1 380px", minWidth: 280 } },
+                    kicker("Add LINE"),
+                    React.createElement("div", { style: { fontFamily: DISPF, fontWeight: 900, fontSize: "clamp(34px,7vw,82px)", lineHeight: 1.02, marginTop: "2vh" } }, "LINE友だち追加"),
+                    React.createElement("div", { style: { marginTop: "3.5vh", fontSize: "clamp(15px,2.6vw,26px)", fontWeight: 800, lineHeight: 1.5 } }, "次のライブ情報・取り置きは"),
+                    React.createElement("div", { style: { fontSize: "clamp(15px,2.6vw,26px)", fontWeight: 800, color: "#06C755" } }, "LINEで先行・確実にお届け"),
+                    React.createElement("div", { style: { marginTop: "3vh", fontSize: "clamp(12px,1.9vw,17px)", color: "rgba(255,255,255,.6)", fontWeight: 600 } }, "QRを読み取ってタップするだけ")),
+                React.createElement("div", { style: { textAlign: "center", flex: "0 0 auto" } },
+                    card(React.createElement("img", { src: scQR(lineUrl), alt: "LINE QR", style: { width: "min(40vw,340px)", height: "min(40vw,340px)", display: "block" } }), { boxShadow: "0 0 0 6px #06C755, 0 30px 80px rgba(0,0,0,.6)" }),
+                    React.createElement("div", { style: { marginTop: 16, fontFamily: MONO, letterSpacing: ".18em", fontSize: "clamp(11px,1.7vw,15px)", color: "#06C755", fontWeight: 700 } }, "SCAN TO ADD LINE")));
+        }
         // follow
         const link = base || siteUrl || "";
         return React.createElement("div", { className: "sc-split" },
@@ -17489,6 +17502,7 @@ function App() {
     const [siteUrl, setSiteUrl] = useState(C.siteUrl || "");
     const [showcaseVideo, setShowcaseVideo] = useState(C.showcaseVideo || ""); // MV用(専用スライド)
     const [showcaseBgVideo, setShowcaseBgVideo] = useState(C.showcaseBgVideo || ""); // 背景用(取り置きページ背面)
+    const [lineUrl, setLineUrl] = useState(C.lineUrl || ""); // LINE友だち追加URL
     const [sendEmail, setSendEmail] = useState(C.sendEmail || ""); // メンバー共有の送信用アドレス
     const [sentLog, setSentLog] = useState(C.sentLog || {}); // { [gigId]: { [contactKey]: ts } } 送信済み(ライブ別)
     const [members, setMembers] = useState(C.members || MEMBERS);
@@ -17524,6 +17538,8 @@ function App() {
             setShowcaseVideo(d.showcaseVideo);
         if (d.showcaseBgVideo !== undefined)
             setShowcaseBgVideo(d.showcaseBgVideo);
+        if (d.lineUrl !== undefined)
+            setLineUrl(d.lineUrl);
         if (d.sendEmail !== undefined)
             setSendEmail(d.sendEmail);
         if (d.sentLog !== undefined)
@@ -17614,7 +17630,7 @@ function App() {
     }, [syncCfg]);
     // ---- 保存（スマホ内 + 共有中ならクラウド） ----
     useEffect(() => {
-        const d = { bandName, siteUrl, showcaseVideo, showcaseBgVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
+        const d = { bandName, siteUrl, showcaseVideo, showcaseBgVideo, lineUrl, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib };
         payloadRef.current = d;
         try {
             localStorage.setItem("tp-data", JSON.stringify(d));
@@ -17634,7 +17650,7 @@ function App() {
             f.fsM.setDoc(f.ref, { ...payloadRef.current, _client: CLIENT_ID, _ts: Date.now() }).catch(() => { });
         }, 600);
         return () => clearTimeout(saveTimer.current);
-    }, [bandName, siteUrl, showcaseVideo, showcaseBgVideo, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
+    }, [bandName, siteUrl, showcaseVideo, showcaseBgVideo, lineUrl, sendEmail, sentLog, members, gigs, currentGigId, tasks, products, sales, ledger, learnedItems, studios, studioHistory, studioMarks, stageItems, stageNotes, songLib, syncReady]);
     // ---- メンバーとステージ図の同期 ----
     useEffect(() => {
         setStageItems((prev) => {
@@ -17742,7 +17758,7 @@ function App() {
         React.createElement("div", { style: { position: "fixed", inset: 0, background: "radial-gradient(60% 45% at 50% 0%, rgba(255,30,60,.14), transparent 70%), radial-gradient(50% 40% at 85% 100%, rgba(255,30,60,.05), transparent 70%)", pointerEvents: "none" } }),
         React.createElement("div", { style: { position: "relative", maxWidth: 560, margin: "0 auto", paddingTop: "calc(14px + env(safe-area-inset-top))", paddingBottom: "calc(120px + env(safe-area-inset-bottom))" } },
             screen === "home" && React.createElement(HomeS, { bandName, siteUrl, syncReady, gig, sold, reserved, profit, needForQuota, breakEvenMore, studios, tasks, setScreen, refresh }),
-            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, showcaseBgVideo, setShowcaseBgVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
+            screen === "settings" && React.createElement(SettingsS, { bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, showcaseBgVideo, setShowcaseBgVideo, lineUrl, setLineUrl, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }),
             screen === "studio" && React.createElement(StudioS, { members, studios, setStudios, studioHistory, setStudioHistory, studioMarks, setStudioMarks, flash }),
             screen === "gig" && React.createElement(GigS, { members, gigs, currentGigId, setCurrentGigId, addGig, updateGig, deleteGig, gig, reservations, setReservations, setlist, setSetlist, songLib, setSongLib, sold, reserved, profit, needForQuota, breakEvenMore, ticketNet, merchProfit, merchRev, merchCost, stageNotes, setStageNotes, stageItems, setStageItems, flash, hpRes: hpResNew, hpAll: hpRes, acceptHp, dismissHp, deleteHpDoc, siteUrl, sentForGig: (sentLog[currentGigId] || {}), markSent, sendEmail }),
             screen === "merch" && React.createElement(MerchS, { products, setProducts, sales, setSales, merchRev, merchProfit, flash, onShowcase: () => setShowcase(true) }),
@@ -17753,7 +17769,7 @@ function App() {
                 React.createElement(Ic, { name: ic, size: 20 }),
                 l))))),
         toast && React.createElement("div", { className: "rise", style: { position: "fixed", left: 20, right: 20, bottom: "calc(86px + env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto", background: COL.mint, color: "#06281d", padding: "12px 16px", borderRadius: 14, fontWeight: 800, fontSize: 13, textAlign: "center", zIndex: 30 } }, toast),
-        showcase && React.createElement(Showcase, { bandName, siteUrl, gigs, products, showcaseVideo, showcaseBgVideo, onClose: () => setShowcase(false) })));
+        showcase && React.createElement(Showcase, { bandName, siteUrl, gigs, products, showcaseVideo, showcaseBgVideo, lineUrl, onClose: () => setShowcase(false) })));
 }
 const Card = ({ children, style }) => React.createElement("div", { className: "rise", style: { background: COL.panel, border: `1px solid ${COL.line}`, borderRadius: 18, padding: 16, ...style } }, children);
 const Label = ({ children }) => React.createElement("div", { style: { fontSize: 11, letterSpacing: 1.2, color: COL.sub, fontWeight: 800 } }, children);
@@ -17847,7 +17863,7 @@ function HomeS({ bandName, siteUrl, syncReady, gig, sold, reserved, profit, need
             "\u30AA\u30D5\u30A3\u30B7\u30E3\u30EB\u30B5\u30A4\u30C8\u3092\u958B\u304F"))));
 }
 // ===================== SETTINGS =====================
-function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, showcaseBgVideo, setShowcaseBgVideo, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
+function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, setShowcaseVideo, showcaseBgVideo, setShowcaseBgVideo, lineUrl, setLineUrl, sendEmail, setSendEmail, members, setMembers, setScreen, syncCfg, syncReady, enableSync, disableSync, inviteUrl, flash }) {
     const [cfgText, setCfgText] = useState("");
     const upd = (id, patch) => setMembers((p) => p.map((m) => m.id === id ? { ...m, ...patch } : m));
     const cycleColor = (id, cur) => { const i = MEMBER_COLORS.indexOf(cur); upd(id, { color: MEMBER_COLORS[(i + 1) % MEMBER_COLORS.length] }); };
@@ -17895,6 +17911,10 @@ function SettingsS({ bandName, setBandName, siteUrl, setSiteUrl, showcaseVideo, 
             React.createElement(Label, null, "\u30B7\u30E7\u30FC\u30B1\u30FC\u30B9\u52D5\u753B\uFF08\u80CC\u666F\u7528\uFF09"),
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u53D6\u308A\u7F6E\u304D\u30DA\u30FC\u30B8\uFF08NEXT LIVE\uFF09\u306E\u80CC\u9762\u3060\u3051\u3067\u30EB\u30FC\u30D7\u518D\u751F\u3002\u305D\u308C\u4EE5\u5916\u306E\u30B9\u30E9\u30A4\u30C9\u306F\u4ECA\u307E\u3067\u901A\u308A\u3002\u7A7A\u306A\u3089\u80CC\u666F\u52D5\u753B\u306A\u3057\u3002"),
             React.createElement("input", { value: showcaseBgVideo, onChange: (e) => setShowcaseBgVideo(e.target.value), placeholder: "https://youtu.be/...", autoCapitalize: "none", style: { ...inp, marginTop: 8 } })),
+        React.createElement(Card, { style: { marginTop: 12 } },
+            React.createElement(Label, null, "LINE\u53CB\u3060\u3061\u8FFD\u52A0URL"),
+            React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "LINE\u516C\u5F0F\u30A2\u30AB\u30A6\u30F3\u30C8\u306E\u300C\u53CB\u3060\u3061\u8FFD\u52A0URL\u300D\uFF08\u4F8B: https://lin.ee/xxxx\uFF09\u3092\u8CBC\u308A\u4ED8\u3051\u3002\u30B7\u30E7\u30FC\u30B1\u30FC\u30B9\uFF08\u7269\u8CA9\u30E2\u30FC\u30C9\uFF09\u306BLINE\u8FFD\u52A0QR\u30B9\u30E9\u30A4\u30C9\u304C\u8FFD\u52A0\u3055\u308C\u307E\u3059\u3002\u7A7A\u306A\u3089\u8868\u793A\u3055\u308C\u307E\u305B\u3093\u3002"),
+            React.createElement("input", { value: lineUrl, onChange: (e) => setLineUrl(e.target.value), placeholder: "https://lin.ee/...", autoCapitalize: "none", style: { ...inp, marginTop: 8 } })),
         React.createElement(Card, { style: { marginTop: 12 } },
             React.createElement(Label, null, "\u9001\u4FE1\u7528\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\uFF08\u5171\u6709\uFF09"),
             React.createElement("div", { style: { fontSize: 11, color: COL.sub, marginTop: 4, lineHeight: 1.7 } }, "\u30D0\u30F3\u30C9\u5C02\u7528\u306E\u7121\u6599\u30E1\u30FC\u30EB\uFF08Gmail\u7B49\uFF09\u3092\u4F5C\u3063\u3066\u3053\u3053\u306B\u5165\u308C\u308B\u3068\u3001\u30E1\u30F3\u30D0\u30FC\u5168\u54E1\u3067\u5171\u6709\u3055\u308C\u307E\u3059\u3002\u3053\u306E\u30A2\u30C9\u30EC\u30B9\u3092\u5404\u81EA\u306E\u30E1\u30FC\u30EB\u30A2\u30D7\u30EA\u306B\u8FFD\u52A0\u3057\u3066\u304A\u304F\u3068\u3001\u9001\u4FE1\u5143\u3092\u63C3\u3048\u3089\u308C\u307E\u3059\u3002"),
