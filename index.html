@@ -478,6 +478,11 @@ body.editing a.release-chip{cursor:pointer}
 body.editing .am-edit{display:block}
 body.editing .ld-flyer{outline:2px dashed rgba(255,30,60,.55);outline-offset:2px;cursor:pointer}
 /* 取り置きフォーム */
+.ld-line-cta{margin-top:16px;padding:18px;border-radius:14px;background:linear-gradient(135deg,rgba(6,199,85,.16),rgba(6,199,85,.04));border:1px solid #06C755;text-align:center}
+.ld-line-cta-t{font-weight:800;font-size:15px;color:#fff}
+.ld-line-cta-s{font-size:12px;color:var(--txt);line-height:1.7;margin-top:6px}
+.ld-line-cta-btn{display:inline-flex;align-items:center;justify-content:center;margin-top:14px;padding:13px 26px;border-radius:12px;background:#06C755;color:#fff;text-decoration:none;font-weight:800;font-size:14px;letter-spacing:.02em}
+.ld-line-cta-btn:active{transform:scale(.98)}
 .ld-res{margin-top:34px;padding:24px 20px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.02)}
 .ld-res h4{font-family:var(--mono);font-size:13px;letter-spacing:.2em;margin:0 0 4px;color:var(--txt)}
 .ld-res p.note{font-size:12px;color:var(--txt2);line-height:1.7;margin:0 0 18px}
@@ -2867,8 +2872,20 @@ if ('serviceWorker' in navigator) {
     window.tpSite.submitReservation({
       name: name, count: count, contact: contact, gigDate: gigDate, venue: venue
     }).then(function(){
-      showMsg('取り置きを受け付けました。当日受付でお名前をお伝えください。', 'ok');
       nameI.value = ''; countI.value = '1'; contactI.value = '';
+      var line = window.TP_LINE_URL || '';
+      if (line){
+        var safe = String(line).replace(/"/g, '&quot;');
+        msg.className = 'ld-msg ok';
+        msg.innerHTML = '取り置きを受け付けました。当日受付でお名前をお伝えください。'
+          + '<div class="ld-line-cta">'
+          + '<div class="ld-line-cta-t">📣 LINEを友だち追加しておくと安心</div>'
+          + '<div class="ld-line-cta-s">取り置きの確認・当日のご案内・次回ライブの先行情報がLINEに届きます。</div>'
+          + '<a class="ld-line-cta-btn" href="' + safe + '" target="_blank" rel="noopener">LINEで友だち追加</a>'
+          + '</div>';
+      } else {
+        showMsg('取り置きを受け付けました。当日受付でお名前をお伝えください。', 'ok');
+      }
     }).catch(function(err){
       submitB.disabled = false;
       showMsg('送信に失敗しました。通信環境をご確認のうえ、もう一度お試しください。', 'err');
