@@ -746,6 +746,27 @@ body.editing #nav{transform:none!important}
 .news-tools .news-del{color:var(--red,#ff1e3c)}
 #news-add{display:none;margin:24px auto 0;background:transparent;border:2px dashed rgba(255,255,255,.25);color:var(--txt2,#9aa3ad);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
 body.editing #news-add{display:block}
+/* ---- GOODS ---- */
+#goods{padding:clamp(60px,10vw,120px) 0;position:relative}
+#goods-add{display:none;margin:28px auto 0;background:transparent;border:2px dashed rgba(255,255,255,.25);color:var(--txt2,#9aa3ad);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+body.editing #goods-add{display:block}
+.goods-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:32px}
+@media(min-width:760px){.goods-grid{grid-template-columns:repeat(3,1fr);gap:20px}}
+.goods-empty{grid-column:1/-1;text-align:center;color:var(--txt3,#6b7280);font-size:14px;padding:40px 0}
+.goods-card{position:relative;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.goods-img-wrap{position:relative;aspect-ratio:1/1;background:#0d0b0c;overflow:hidden}
+.goods-img{width:100%;height:100%;object-fit:cover;display:block}
+.goods-noimg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono,monospace);font-size:11px;letter-spacing:.2em;color:#444}
+.goods-sold{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.78);color:#fff;font-family:var(--mono,monospace);font-size:10px;letter-spacing:.14em;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.25)}
+.goods-info{padding:13px 14px 16px;display:flex;flex-direction:column;gap:6px}
+.goods-name{font-weight:800;font-size:14px;color:#fff;line-height:1.45}
+.goods-price{font-family:var(--mono,monospace);font-size:14px;color:var(--red,#ff1e3c);font-weight:700}
+.goods-desc{font-size:12px;color:var(--txt,#c8ccd2);line-height:1.7}
+.goods-tools{display:flex;gap:8px;padding:0 14px 14px}
+.goods-tools button{flex:1;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#fff;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.goods-tools .goods-del{color:#ff6b81;border-color:rgba(255,107,129,.4)}
+.news-chk{display:flex;align-items:center;gap:8px;margin:12px 0 2px;font-size:13px;color:var(--txt,#c8ccd2);cursor:pointer}
+.news-chk input{width:18px;height:18px}
 .news-empty{color:var(--txt2,#9aa3ad);font-size:14px;padding:14px 4px;text-align:center}
 .news-ov{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.82);overflow-y:auto;display:flex;justify-content:center;padding:40px 16px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .news-page{position:relative;width:100%;max-width:640px;height:max-content;background:#0d0d0f;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:50px 22px 34px}
@@ -783,6 +804,7 @@ textarea.news-in{resize:vertical;line-height:1.7}
     <li><a href="#disco">DISCOGRAPHY</a></li>
     <li><a href="#live">LIVE</a></li>
     <li><a href="#member">MEMBER</a></li>
+    <li><a href="#goods">GOODS</a></li>
   </ul>
   <a class="ticket" href="https://x.com/tulipparty1531" target="_blank" rel="noopener">FOLLOW ↗</a>
   <button id="menu-btn" aria-label="menu" type="button"><span></span><span></span><span></span></button>
@@ -792,6 +814,7 @@ textarea.news-in{resize:vertical;line-height:1.7}
   <a href="#disco">DISCOGRAPHY</a>
   <a href="#live">LIVE</a>
   <a href="#member">MEMBER</a>
+  <a href="#goods">GOODS</a>
   <a href="https://x.com/tulipparty1531" target="_blank" rel="noopener">X (TWITTER) ↗</a>
 </div>
 
@@ -1135,6 +1158,144 @@ textarea.news-in{resize:vertical;line-height:1.7}
   try {
     var lastEd = isEditing();
     new MutationObserver(function(){ var e = isEditing(); if (e !== lastEd){ lastEd = e; window.tpRenderNews(); } }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  } catch(e){}
+})();
+</script>
+<!-- ============ GOODS ============ -->
+<section id="goods">
+  <span class="ghost" aria-hidden="true">GOODS</span>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="no">06</span>
+      <h2>Goods</h2>
+      <span class="jp">グッズ — 物販</span>
+    </div>
+    <div id="goods-grid" class="goods-grid"></div>
+    <button type="button" id="goods-add">＋ グッズを追加</button>
+  </div>
+</section>
+<script>
+/* ============ GOODS（グッズ） ============ */
+(function(){
+  "use strict";
+  window.tpGoods = window.tpGoods || [];
+  window.tpGoodsImgs = window.tpGoodsImgs || {};
+  var loadedImgs = {};
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function isEditing(){ return document.body.classList.contains('editing'); }
+  function imgFor(id){ return window.tpGoodsImgs[id] || loadedImgs['goods-' + id] || ''; }
+  function dirty(){ if (window.tpMarkDirty) try { window.tpMarkDirty(); } catch(e){} }
+  function closeOv(){ var o = document.querySelector('.goods-ov'); if (o) o.remove(); }
+  function yen(p){ var s = String(p == null ? '' : p).trim(); if (!s) return ''; if (/^\d+$/.test(s)) return '\u00A5' + (+s).toLocaleString('ja-JP'); return esc(s); }
+
+  window.tpRenderGoods = function(list, images){
+    if (Array.isArray(list)) window.tpGoods = list.slice();
+    if (images) loadedImgs = images;
+    var box = document.getElementById('goods-grid');
+    if (!box) return;
+    box.innerHTML = '';
+    var arr = window.tpGoods.slice();
+    if (!arr.length){
+      var em = document.createElement('div');
+      em.className = 'goods-empty';
+      em.textContent = isEditing() ? '\u300C\uFF0B \u30B0\u30C3\u30BA\u3092\u8FFD\u52A0\u300D\u304B\u3089\u767B\u9332\u3067\u304D\u307E\u3059\u3002' : '\u6E96\u5099\u4E2D';
+      box.appendChild(em);
+      return;
+    }
+    arr.forEach(function(g){
+      var card = document.createElement('div');
+      card.className = 'goods-card';
+      var img = imgFor(g.id);
+      card.innerHTML =
+        '<div class="goods-img-wrap">' +
+          (img ? '<img class="goods-img" src="' + img + '" alt="">' : '<div class="goods-noimg">NO IMAGE</div>') +
+          (g.soldout ? '<span class="goods-sold">SOLD OUT</span>' : '') +
+        '</div>' +
+        '<div class="goods-info">' +
+          '<div class="goods-name">' + esc(g.name) + '</div>' +
+          (g.price ? '<div class="goods-price">' + yen(g.price) + '</div>' : '') +
+          (g.desc ? '<div class="goods-desc">' + esc(g.desc).replace(/\n/g, '<br>') + '</div>' : '') +
+        '</div>' +
+        (isEditing() ? '<div class="goods-tools"><button type="button" class="goods-edit">\u7DE8\u96C6</button><button type="button" class="goods-del">\u524A\u9664</button></div>' : '');
+      if (isEditing()){
+        card.querySelector('.goods-edit').addEventListener('click', function(){ openEdit(g); });
+        card.querySelector('.goods-del').addEventListener('click', function(){
+          if (!window.confirm('\u3053\u306E\u30B0\u30C3\u30BA\u3092\u524A\u9664\u3057\u307E\u3059\u304B?')) return;
+          window.tpGoods = window.tpGoods.filter(function(x){ return x.id !== g.id; });
+          delete window.tpGoodsImgs[g.id];
+          window.tpRenderGoods(); dirty();
+        });
+      }
+      box.appendChild(card);
+    });
+  };
+
+  window.tpCollectGoods = function(){
+    return (window.tpGoods || []).map(function(g){ return { id: g.id, name: g.name || '', price: g.price || '', desc: g.desc || '', soldout: !!g.soldout }; });
+  };
+
+  function openEdit(g){
+    closeOv();
+    var isNew = !g;
+    if (isNew) g = { id: 'g' + Date.now(), name: '', price: '', desc: '', soldout: false };
+    var ov = document.createElement('div');
+    ov.className = 'pw-ov goods-ov';
+    var img = imgFor(g.id);
+    ov.innerHTML =
+      '<div class="news-page news-edit-page">' +
+        '<button type="button" class="news-x">\u2715</button>' +
+        '<label class="news-lbl">\u5546\u54C1\u540D</label>' +
+        '<input type="text" class="news-in" id="ge-name" placeholder="\u5546\u54C1\u540D" value="' + esc(g.name) + '">' +
+        '<label class="news-lbl">\u4FA1\u683C</label>' +
+        '<input type="text" class="news-in" id="ge-price" placeholder="\u4F8B: 2500" value="' + esc(g.price) + '">' +
+        '<label class="news-lbl">\u8AAC\u660E</label>' +
+        '<textarea class="news-in" id="ge-desc" rows="4" placeholder="\u30B5\u30A4\u30BA\u30FB\u7D20\u6750\u30FB\u30AB\u30E9\u30FC\u306A\u3069"></textarea>' +
+        '<label class="news-chk"><input type="checkbox" id="ge-sold"' + (g.soldout ? ' checked' : '') + '> SOLD OUT\uFF08\u58F2\u308A\u5207\u308C\u8868\u793A\uFF09</label>' +
+        '<label class="news-lbl">\u5199\u771F</label>' +
+        '<div class="news-photo-wrap"><img class="news-photo-prev" id="ge-prev" src="' + img + '"' + (img ? '' : ' style="display:none"') + '><label class="news-photo-btn">\u5199\u771F\u3092\u9078\u3076<input type="file" accept="image/*" id="ge-file" hidden></label></div>' +
+        '<div class="news-edit-actions"><button type="button" class="news-save" id="ge-save">\u4FDD\u5B58</button></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#ge-desc').value = (g.desc || '');
+    ov.querySelector('.news-x').addEventListener('click', closeOv);
+    ov.querySelector('#ge-file').addEventListener('change', function(e){
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function(){ shrink(r.result, 1200, function(durl){ window.tpGoodsImgs[g.id] = durl; var p = ov.querySelector('#ge-prev'); p.src = durl; p.style.display = ''; }); };
+      r.readAsDataURL(f);
+    });
+    ov.querySelector('#ge-save').addEventListener('click', function(){
+      g.name = ov.querySelector('#ge-name').value.trim();
+      g.price = ov.querySelector('#ge-price').value.trim();
+      g.desc = ov.querySelector('#ge-desc').value;
+      g.soldout = ov.querySelector('#ge-sold').checked;
+      if (!g.name && !g.price && !g.desc){ closeOv(); return; }
+      if (isNew) window.tpGoods = (window.tpGoods || []).concat([g]);
+      else window.tpGoods = window.tpGoods.map(function(x){ return x.id === g.id ? g : x; });
+      window.tpRenderGoods(); dirty(); closeOv();
+    });
+  }
+
+  function shrink(dataUrl, max, cb){
+    var im = new Image();
+    im.onload = function(){
+      var w = im.width, h = im.height;
+      if (w <= max && h <= max){ cb(dataUrl); return; }
+      var sc = Math.min(max / w, max / h);
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * sc); c.height = Math.round(h * sc);
+      try { c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL('image/jpeg', 0.85)); }
+      catch(e){ cb(dataUrl); }
+    };
+    im.onerror = function(){ cb(dataUrl); };
+    im.src = dataUrl;
+  }
+
+  function wireAdd(){ var a = document.getElementById('goods-add'); if (a && !a._w){ a._w = 1; a.addEventListener('click', function(){ openEdit(null); }); } }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireAdd); else wireAdd();
+  try {
+    var lastEd = isEditing();
+    new MutationObserver(function(){ var e = isEditing(); if (e !== lastEd){ lastEd = e; window.tpRenderGoods(); } }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   } catch(e){}
 })();
 </script>
@@ -2385,6 +2546,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
       }
       // 5) NEWS
       if (window.tpRenderNews) window.tpRenderNews(Array.isArray(data.news) ? data.news : [], data.images || {});
+      // 5b) GOODS
+      if (window.tpRenderGoods) window.tpRenderGoods(Array.isArray(data.goods) ? data.goods : [], data.images || {});
       // 6) ライブ詳細
       if (data.liveDetail && typeof data.liveDetail === 'object'){
         Object.keys(data.liveDetail).forEach(function(k){
@@ -2585,6 +2748,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     var memberLinks = (window.tpCollectMemberLinks ? window.tpCollectMemberLinks() : {});
     var news = (window.tpCollectNews ? window.tpCollectNews() : []);
     if (window.tpNewsImgs) Object.keys(window.tpNewsImgs).forEach(function(k){ if (window.tpNewsImgs[k]) images['news-' + k] = window.tpNewsImgs[k]; });
+    var goods = (window.tpCollectGoods ? window.tpCollectGoods() : []);
+    if (window.tpGoodsImgs) Object.keys(window.tpGoodsImgs).forEach(function(k){ if (window.tpGoodsImgs[k]) images['goods-' + k] = window.tpGoodsImgs[k]; });
     var liveDetail = {};
     document.querySelectorAll('#live-detail [data-ld]').forEach(function(el){
       liveDetail[el.getAttribute('data-ld')] = el.innerHTML;
@@ -2593,7 +2758,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     var appleMusic = (window.tpCollectApple ? window.tpCollectApple() : {});
     var thanks = (window.tpCollectThanks ? window.tpCollectThanks() : {});
     var lineUrl = (window.tpCollectLine ? window.tpCollectLine() : '');
-    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, liveDetail: liveDetail, playLinks: playLinks, appleMusic: appleMusic, thanks: thanks, lineUrl: lineUrl };
+    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, goods: goods, liveDetail: liveDetail, playLinks: playLinks, appleMusic: appleMusic, thanks: thanks, lineUrl: lineUrl };
   }
 
   /* ---- Firestore へ保存(全員に共有) ---- */
@@ -2616,6 +2781,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         movieList: data.movieList,
         memberLinks: data.memberLinks || {},
         news: data.news || [],
+        goods: data.goods || [],
         liveDetail: data.liveDetail || {},
         playLinks: data.playLinks || {},
         appleMusic: data.appleMusic || {},
