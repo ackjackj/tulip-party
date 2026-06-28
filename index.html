@@ -1,4 +1,4 @@
-<!-- build-155501 -->
+<!-- build-101112 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -427,6 +427,63 @@ body.editing .foot .sns a.line-foot{display:inline-flex;outline:1px dashed rgba(
 .tk-line-btn:active{transform:scale(.98)}
 .foot .sns a.tk-foot-link{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--red);text-decoration:none;border:1px dashed rgba(255,30,60,.5);padding:4px 8px;border-radius:6px}
 body.editing .foot .sns a.tk-foot-link{display:inline-block}
+
+/* ===== BIOGRAPHY page ===== */
+#bio-page{position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto;opacity:0;transition:opacity .32s ease;-webkit-overflow-scrolling:touch}
+#bio-page.open{opacity:1}
+.bio-close{position:fixed;top:max(14px,env(safe-area-inset-top));right:16px;z-index:5;width:44px;height:44px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.45);color:#fff;font-size:18px;cursor:pointer}
+.bio-inner{position:relative;max-width:680px;margin:0 auto;padding:0 0 72px}
+.bio-hero-wrap{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;background:#101013}
+.bio-hero{width:100%;height:100%;object-fit:cover;display:block}
+.bio-hero-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;letter-spacing:.12em;color:var(--txt3);pointer-events:none;background:linear-gradient(180deg,#141417,#0b0b0d)}
+.bio-h{font-family:var(--display),'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:clamp(34px,11vw,64px);line-height:1;letter-spacing:.01em;text-align:center;margin:40px 0 8px}
+.bio-h span{color:#fff}
+.bio-h b{color:var(--red);font-weight:900}
+.bio-profile{padding:24px 22px 8px;text-align:center}
+.bio-kicker{font-family:var(--display),sans-serif;font-weight:900;font-size:clamp(22px,7vw,34px);color:var(--red);letter-spacing:.04em;margin-bottom:18px}
+.bio-group-wrap{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:10px;background:#101013;margin-bottom:18px}
+.bio-group{width:100%;height:100%;object-fit:cover;display:block}
+.bio-group-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--txt3);pointer-events:none;background:linear-gradient(180deg,#141417,#0b0b0d)}
+.bio-ptext{font-size:14px;line-height:2;color:var(--txt2);text-align:left;white-space:pre-wrap;min-height:1.6em}
+.bio-ptext:empty::before{content:"バンド紹介文（タップで編集）";color:var(--txt3)}
+.bio-members{padding:8px 22px 0}
+.bio-mem{padding:34px 0 10px;border-top:1px solid rgba(255,255,255,.08)}
+.bio-mem:first-child{border-top:0}
+.bio-mem-img-wrap{position:relative;width:100%;max-width:320px;margin:0 auto 16px;aspect-ratio:1/1;overflow:hidden;border-radius:8px;background:#101013}
+.bio-mem-img{width:100%;height:100%;object-fit:cover;display:block}
+.bio-mem-img-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--txt3);pointer-events:none;background:linear-gradient(180deg,#141417,#0b0b0d)}
+.bio-mem-name{font-family:var(--display),sans-serif;font-weight:900;font-size:22px;color:#fff;margin:0 0 2px}
+.bio-mem-part{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--red);margin-bottom:12px}
+.bio-mem-text{font-size:13.5px;line-height:1.95;color:var(--txt2);white-space:pre-wrap;min-height:1.4em}
+.bio-mem-text:empty::before{content:"プロフィール文（タップで編集）";color:var(--txt3)}
+.bio-mem-del{display:none;margin-top:12px;background:transparent;border:1px solid rgba(255,30,60,.5);color:var(--red);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+body.editing .bio-mem-del{display:inline-block}
+.bio-tl-head{font-family:var(--display),sans-serif;font-weight:900;font-size:clamp(26px,8vw,40px);color:#fff;letter-spacing:.04em;text-align:center;margin:48px 0 18px;padding-top:36px;border-top:1px solid rgba(255,255,255,.08)}
+.bio-timeline{padding:0 22px}
+.bio-tl{border-bottom:1px solid rgba(255,255,255,.12)}
+.bio-tl-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:transparent;border:0;padding:20px 4px;cursor:pointer;text-align:left;font-family:inherit}
+.bio-tl-year{font-family:var(--display),sans-serif;font-weight:900;font-size:30px;color:#fff;line-height:1}
+.bio-tl-plus{flex:0 0 auto;width:30px;height:30px;position:relative}
+.bio-tl-plus::before,.bio-tl-plus::after{content:"";position:absolute;background:var(--red);transition:transform .25s ease}
+.bio-tl-plus::before{top:50%;left:4px;right:4px;height:3px;transform:translateY(-50%)}
+.bio-tl-plus::after{left:50%;top:4px;bottom:4px;width:3px;transform:translateX(-50%)}
+.bio-tl.open .bio-tl-plus::after{transform:translateX(-50%) scaleY(0)}
+.bio-tl-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.bio-tl.open .bio-tl-body{max-height:1200px}
+.bio-tl-inner{padding:0 4px 22px;font-size:13.5px;line-height:1.95;color:var(--txt2);white-space:pre-wrap}
+.bio-tl-edit{display:none;gap:8px;padding:0 4px 18px}
+body.editing .bio-tl-edit{display:flex}
+.bio-tl-edit button{background:transparent;border:1px solid rgba(255,255,255,.25);color:var(--txt2);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+.bio-tl-edit button.del{border-color:rgba(255,30,60,.5);color:var(--red)}
+.bio-add{display:none;margin:22px auto 0;background:transparent;border:2px dashed rgba(255,255,255,.25);color:var(--txt2);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+body.editing .bio-add{display:block}
+body.editing .bio-hero-wrap,body.editing .bio-group-wrap,body.editing .bio-mem-img-wrap{outline:2px dashed rgba(255,30,60,.4);outline-offset:-2px;cursor:pointer}
+body.editing .bio-ptext,body.editing .bio-mem-text,body.editing .bio-mem-name,body.editing .bio-mem-part{outline:1px dashed rgba(255,255,255,.25);outline-offset:3px;cursor:text}
+.bio-inline-edit{width:100%;box-sizing:border-box;margin-top:10px;padding:12px 14px;background:#161619;border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-size:15px;font-family:inherit;line-height:1.7;resize:vertical}
+.bio-inline-edit:focus{outline:2px solid var(--red);outline-offset:0}
+.pw-go{margin-top:14px;width:100%;background:var(--red);border:0;color:#fff;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+.pw-cancel{margin-top:8px;width:100%;background:transparent;border:1px solid rgba(255,255,255,.25);color:var(--txt2);border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+
 #thanks-page{position:fixed;inset:0;z-index:200;background:#070406;overflow-y:auto;opacity:0;transition:opacity .32s ease;-webkit-overflow-scrolling:touch}
 #thanks-page.open{opacity:1}
 #thanks-page::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(60% 40% at 50% 12%,rgba(255,30,60,.18),transparent 60%)}
@@ -802,7 +859,7 @@ textarea.news-in{resize:vertical;line-height:1.7}
   <a class="brand" role="button" tabindex="0"><img class="mk-blend" src="data:image/jpeg;base64,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" alt="">TULIP PARTY</a>
   <ul>
     <li><a href="#band">BAND</a></li>
-    <li><a href="#band">BIOGRAPHY</a></li>
+    <li><a href="#bio">BIOGRAPHY</a></li>
     <li><a href="#disco">DISCOGRAPHY</a></li>
     <li><a href="#live">LIVE</a></li>
     <li><a href="#member">MEMBER</a></li>
@@ -813,7 +870,7 @@ textarea.news-in{resize:vertical;line-height:1.7}
 </nav>
 <div id="m-menu">
   <a href="#band">BAND</a>
-  <a href="#band">BIOGRAPHY</a>
+  <a href="#bio">BIOGRAPHY</a>
   <a href="#disco">DISCOGRAPHY</a>
   <a href="#live">LIVE</a>
   <a href="#member">MEMBER</a>
@@ -2540,6 +2597,10 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         var _g = Array.isArray(data.goods) ? data.goods : null;
         window.tpRenderGoods((_g && _g.length) ? _g : (window.tpGoods || []), data.images || {});
       }
+      // 5c) BIOGRAPHY
+      if (window.tpRenderBio){
+        window.tpRenderBio(data.bio || { profile:'', members:[], timeline:[] }, data.images || {});
+      }
       // 6) ライブ詳細
       if (data.liveDetail && typeof data.liveDetail === 'object'){
         Object.keys(data.liveDetail).forEach(function(k){
@@ -2742,6 +2803,8 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     if (window.tpNewsImgs) Object.keys(window.tpNewsImgs).forEach(function(k){ if (window.tpNewsImgs[k]) images['news-' + k] = window.tpNewsImgs[k]; });
     var goods = (window.tpCollectGoods ? window.tpCollectGoods() : []);
     if (window.tpGoodsImgs) Object.keys(window.tpGoodsImgs).forEach(function(k){ if (window.tpGoodsImgs[k]) images['goods-' + k] = window.tpGoodsImgs[k]; });
+    var bio = (window.tpCollectBio ? window.tpCollectBio() : {});
+    if (window.tpBioImgs) Object.keys(window.tpBioImgs).forEach(function(k){ if (window.tpBioImgs[k]) images[k] = window.tpBioImgs[k]; });
     var liveDetail = {};
     document.querySelectorAll('#live-detail [data-ld]').forEach(function(el){
       liveDetail[el.getAttribute('data-ld')] = el.innerHTML;
@@ -2750,7 +2813,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
     var appleMusic = (window.tpCollectApple ? window.tpCollectApple() : {});
     var thanks = (window.tpCollectThanks ? window.tpCollectThanks() : {});
     var lineUrl = (window.tpCollectLine ? window.tpCollectLine() : '');
-    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, goods: goods, liveDetail: liveDetail, playLinks: playLinks, appleMusic: appleMusic, thanks: thanks, lineUrl: lineUrl };
+    return { texts: texts, movieList: movieList, images: images, memberLinks: memberLinks, news: news, goods: goods, bio: bio, liveDetail: liveDetail, playLinks: playLinks, appleMusic: appleMusic, thanks: thanks, lineUrl: lineUrl };
   }
 
   /* ---- Firestore へ保存(全員に共有) ---- */
@@ -2774,6 +2837,7 @@ if (window.matchMedia('(pointer:fine)').matches && !reduced){
         memberLinks: data.memberLinks || {},
         news: data.news || [],
         goods: data.goods || [],
+        bio: data.bio || {},
         liveDetail: data.liveDetail || {},
         playLinks: data.playLinks || {},
         appleMusic: data.appleMusic || {},
@@ -2968,6 +3032,284 @@ if ('serviceWorker' in navigator) {
     <div class="tk-line" id="tk-line"></div>
   </div>
 </div>
+
+<div id="bio-page" role="dialog" aria-modal="true" aria-label="BIOGRAPHY" hidden>
+  <button class="bio-close" type="button" aria-label="閉じる">✕</button>
+  <div class="bio-inner">
+    <div class="bio-hero-wrap">
+      <img class="bio-hero" data-ei="bio-hero" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+      <div class="bio-hero-ph">＋ ヒーロー画像をタップで設定</div>
+    </div>
+
+    <h2 class="bio-h"><span>BIO</span><b>GRAPHY</b></h2>
+
+    <div class="bio-profile">
+      <div class="bio-kicker">PROFILE</div>
+      <div class="bio-group-wrap">
+        <img class="bio-group" data-ei="bio-profile" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+        <div class="bio-group-ph">＋ 集合写真をタップで設定</div>
+      </div>
+      <div class="bio-ptext" data-bio="profile"></div>
+    </div>
+
+    <div class="bio-members" id="bio-members"></div>
+    <button type="button" id="bio-mem-add" class="bio-add">＋ メンバーを追加</button>
+
+    <div class="bio-tl-head">HISTORY</div>
+    <div class="bio-timeline" id="bio-timeline"></div>
+    <button type="button" id="bio-tl-add" class="bio-add">＋ 年表に追加</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   BIOGRAPHY ページ: #bio で開閉 + 編集(画像/文章/メンバー/年表)
+   データ: window.tpBio = { profile, members:[], timeline:[] }
+   画像キー: bio-hero / bio-profile / bio-m-<id>
+   ============================================================ */
+(function(){
+  "use strict";
+  var page = document.getElementById('bio-page');
+  if (!page) return;
+
+  window.tpBio = window.tpBio || { profile: '', members: [], timeline: [] };
+  window.tpBioImgs = window.tpBioImgs || {};
+  var loadedImgs = {};
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function isEditing(){ return document.body.classList.contains('editing'); }
+  function dirty(){ if (window.tpMarkDirty) try { window.tpMarkDirty(); } catch(e){} }
+  function imgFor(key){ return window.tpBioImgs[key] || loadedImgs[key] || ''; }
+
+  /* ---- 画像リサイズ ---- */
+  function shrink(dataUrl, max, cb){
+    var im = new Image();
+    im.onload = function(){
+      var w = im.width, h = im.height, s = Math.min(1, max / Math.max(w, h));
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * s); c.height = Math.round(h * s);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      try { cb(c.toDataURL('image/jpeg', 0.82)); } catch(e){ cb(dataUrl); }
+    };
+    im.onerror = function(){ cb(dataUrl); };
+    im.src = dataUrl;
+  }
+
+  /* ---- 画像差し替え(共通) ---- */
+  function pickImage(key, applyEl){
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.addEventListener('change', function(){
+      var f = inp.files && inp.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function(){ shrink(r.result, 1400, function(durl){
+        window.tpBioImgs[key] = durl;
+        if (applyEl){ applyEl.src = durl; applyEl.style.display = ''; var ph = applyEl.parentNode.querySelector('.bio-hero-ph,.bio-group-ph,.bio-mem-img-ph'); if (ph) ph.style.display = 'none'; }
+        dirty();
+      }); };
+      r.readAsDataURL(f);
+    });
+    inp.click();
+  }
+
+  /* ---- インライン文字編集 ---- */
+  function editText(el, multiline, onSave){
+    var cur = el.getAttribute('data-raw') || '';
+    var ta = document.createElement(multiline ? 'textarea' : 'input');
+    ta.className = 'bio-inline-edit';
+    ta.value = cur;
+    if (multiline){ ta.rows = 6; }
+    var ov = document.createElement('div');
+    ov.className = 'pw-ov';
+    ov.innerHTML = '<div class="pw-box" style="max-width:520px"><p>テキストを編集</p></div>';
+    var box = ov.querySelector('.pw-box');
+    box.appendChild(ta);
+    var save = document.createElement('button');
+    save.className = 'pw-go'; save.textContent = '保存';
+    var cancel = document.createElement('button');
+    cancel.className = 'pw-cancel'; cancel.textContent = 'キャンセル';
+    box.appendChild(save); box.appendChild(cancel);
+    document.body.appendChild(ov);
+    ta.focus();
+    save.addEventListener('click', function(){ onSave(ta.value); ov.remove(); dirty(); });
+    cancel.addEventListener('click', function(){ ov.remove(); });
+  }
+
+  /* ---- 描画 ---- */
+  window.tpRenderBio = function(data, images){
+    if (data && typeof data === 'object'){
+      window.tpBio = {
+        profile: data.profile || '',
+        members: Array.isArray(data.members) ? data.members.slice() : [],
+        timeline: Array.isArray(data.timeline) ? data.timeline.slice() : []
+      };
+    }
+    if (images) loadedImgs = images;
+    var ed = isEditing();
+
+    // ヒーロー画像
+    var hero = page.querySelector('.bio-hero');
+    var heroPh = page.querySelector('.bio-hero-ph');
+    var hi = imgFor('bio-hero');
+    if (hi){ hero.src = hi; hero.style.display = ''; if (heroPh) heroPh.style.display = 'none'; }
+    else { hero.style.display = 'none'; if (heroPh) heroPh.style.display = ed ? 'flex' : 'none'; }
+
+    // 集合写真
+    var grp = page.querySelector('.bio-group');
+    var grpPh = page.querySelector('.bio-group-ph');
+    var gi = imgFor('bio-profile');
+    if (gi){ grp.src = gi; grp.style.display = ''; if (grpPh) grpPh.style.display = 'none'; }
+    else { grp.style.display = 'none'; if (grpPh) grpPh.style.display = ed ? 'flex' : 'none'; }
+
+    // プロフィール文
+    var pt = page.querySelector('.bio-ptext');
+    pt.setAttribute('data-raw', window.tpBio.profile || '');
+    pt.innerHTML = window.tpBio.profile ? esc(window.tpBio.profile).replace(/\n/g, '<br>') : '';
+
+    // メンバー
+    var mbox = page.querySelector('#bio-members');
+    mbox.innerHTML = '';
+    window.tpBio.members.forEach(function(m){
+      var key = 'bio-m-' + m.id;
+      var mi = imgFor(key);
+      var el = document.createElement('div');
+      el.className = 'bio-mem';
+      el.innerHTML =
+        '<div class="bio-mem-img-wrap">' +
+          '<img class="bio-mem-img" alt="" ' + (mi ? 'src="' + mi + '"' : 'style="display:none"') + '>' +
+          '<div class="bio-mem-img-ph" ' + (mi ? 'style="display:none"' : '') + '>＋ 写真をタップで設定</div>' +
+        '</div>' +
+        '<div class="bio-mem-name" data-raw="' + esc(m.name || '') + '">' + (esc(m.name || '') || (ed ? '名前（タップ）' : '')) + '</div>' +
+        '<div class="bio-mem-part" data-raw="' + esc(m.part || '') + '">' + (esc(m.part || '') || (ed ? 'パート（タップ）' : '')) + '</div>' +
+        '<div class="bio-mem-text" data-raw="' + esc(m.bio || '') + '">' + (m.bio ? esc(m.bio).replace(/\n/g, '<br>') : '') + '</div>' +
+        (ed ? '<button type="button" class="bio-mem-del">このメンバーを削除</button>' : '');
+      // 画像
+      var wrap = el.querySelector('.bio-mem-img-wrap');
+      if (ed) wrap.addEventListener('click', function(){ pickImage(key, el.querySelector('.bio-mem-img')); });
+      // テキスト編集
+      if (ed){
+        el.querySelector('.bio-mem-name').addEventListener('click', function(){ editText(this, false, function(v){ m.name = v; window.tpRenderBio(); }); });
+        el.querySelector('.bio-mem-part').addEventListener('click', function(){ editText(this, false, function(v){ m.part = v; window.tpRenderBio(); }); });
+        el.querySelector('.bio-mem-text').addEventListener('click', function(){ editText(this, true, function(v){ m.bio = v; window.tpRenderBio(); }); });
+        el.querySelector('.bio-mem-del').addEventListener('click', function(){
+          if (!window.confirm('このメンバーを削除しますか?')) return;
+          window.tpBio.members = window.tpBio.members.filter(function(x){ return x.id !== m.id; });
+          delete window.tpBioImgs[key];
+          window.tpRenderBio(); dirty();
+        });
+      }
+      mbox.appendChild(el);
+    });
+
+    // プロフィール文の編集
+    if (ed){
+      pt.onclick = function(){ editText(this, true, function(v){ window.tpBio.profile = v; window.tpRenderBio(); }); };
+    } else { pt.onclick = null; }
+
+    // ヒーロー/集合写真の編集クリック
+    var hw = page.querySelector('.bio-hero-wrap');
+    var gw = page.querySelector('.bio-group-wrap');
+    hw.onclick = ed ? function(){ pickImage('bio-hero', hero); } : null;
+    gw.onclick = ed ? function(){ pickImage('bio-profile', grp); } : null;
+
+    // 年表
+    var tbox = page.querySelector('#bio-timeline');
+    tbox.innerHTML = '';
+    window.tpBio.timeline.forEach(function(t){
+      var el = document.createElement('div');
+      el.className = 'bio-tl';
+      el.innerHTML =
+        '<button type="button" class="bio-tl-bar"><span class="bio-tl-year">' + esc(t.year || '') + '</span><span class="bio-tl-plus"></span></button>' +
+        '<div class="bio-tl-body"><div class="bio-tl-inner">' + (t.text ? esc(t.text).replace(/\n/g, '<br>') : '') + '</div>' +
+          (ed ? '<div class="bio-tl-edit"><button type="button" class="ed">編集</button><button type="button" class="del">削除</button></div>' : '') +
+        '</div>';
+      el.querySelector('.bio-tl-bar').addEventListener('click', function(){ el.classList.toggle('open'); });
+      if (ed){
+        el.querySelector('.bio-tl-edit .ed').addEventListener('click', function(e){
+          e.stopPropagation();
+          editYear(t);
+        });
+        el.querySelector('.bio-tl-edit .del').addEventListener('click', function(e){
+          e.stopPropagation();
+          if (!window.confirm('この年を削除しますか?')) return;
+          window.tpBio.timeline = window.tpBio.timeline.filter(function(x){ return x.id !== t.id; });
+          window.tpRenderBio(); dirty();
+        });
+      }
+      tbox.appendChild(el);
+    });
+  };
+
+  /* ---- 年表の年+内容を編集 ---- */
+  function editYear(t){
+    var isNew = !t;
+    if (isNew) t = { id: 't' + Date.now(), year: '', text: '' };
+    var ov = document.createElement('div');
+    ov.className = 'pw-ov';
+    ov.innerHTML =
+      '<div class="pw-box" style="max-width:520px">' +
+        '<p>年表を編集</p>' +
+        '<input type="text" class="bio-inline-edit" id="by-year" placeholder="年（例: 2024）" value="' + esc(t.year) + '">' +
+        '<textarea class="bio-inline-edit" id="by-text" rows="6" placeholder="その年の出来事">' + esc(t.text) + '</textarea>' +
+      '</div>';
+    var box = ov.querySelector('.pw-box');
+    var save = document.createElement('button'); save.className = 'pw-go'; save.textContent = '保存';
+    var cancel = document.createElement('button'); cancel.className = 'pw-cancel'; cancel.textContent = 'キャンセル';
+    box.appendChild(save); box.appendChild(cancel);
+    document.body.appendChild(ov);
+    save.addEventListener('click', function(){
+      t.year = ov.querySelector('#by-year').value;
+      t.text = ov.querySelector('#by-text').value;
+      if (isNew) window.tpBio.timeline = (window.tpBio.timeline || []).concat([t]);
+      window.tpRenderBio(); dirty(); ov.remove();
+    });
+    cancel.addEventListener('click', function(){ ov.remove(); });
+  }
+
+  /* ---- 収集(共有データへ) ---- */
+  window.tpCollectBio = function(){
+    return {
+      profile: (window.tpBio && window.tpBio.profile) || '',
+      members: (window.tpBio && window.tpBio.members || []).map(function(m){ return { id: m.id, name: m.name || '', part: m.part || '', bio: m.bio || '' }; }),
+      timeline: (window.tpBio && window.tpBio.timeline || []).map(function(t){ return { id: t.id, year: t.year || '', text: t.text || '' }; })
+    };
+  };
+
+  /* ---- 追加ボタン ---- */
+  var memAdd = document.getElementById('bio-mem-add');
+  if (memAdd) memAdd.addEventListener('click', function(){
+    window.tpBio.members = (window.tpBio.members || []).concat([{ id: 'm' + Date.now(), name: '', part: '', bio: '' }]);
+    window.tpRenderBio(); dirty();
+  });
+  var tlAdd = document.getElementById('bio-tl-add');
+  if (tlAdd) tlAdd.addEventListener('click', function(){ editYear(null); });
+
+  /* ---- 編集モード切替で再描画 ---- */
+  var lastEd = isEditing();
+  new MutationObserver(function(){ var e = isEditing(); if (e !== lastEd){ lastEd = e; if (!page.hidden) window.tpRenderBio(); } }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+  /* ---- ルーティング ---- */
+  function open(){
+    page.hidden = false;
+    requestAnimationFrame(function(){ page.classList.add('open'); });
+    document.documentElement.style.overflow = 'hidden';
+    window.tpRenderBio();
+  }
+  function close(){
+    page.classList.remove('open');
+    document.documentElement.style.overflow = '';
+    setTimeout(function(){ if (!page.classList.contains('open')) page.hidden = true; }, 340);
+  }
+  function isBioRoute(){ return (location.hash || '').indexOf('#bio') === 0; }
+  function route(){ if (isBioRoute()) open(); else close(); }
+  window.addEventListener('hashchange', route);
+  page.querySelector('.bio-close').addEventListener('click', function(){
+    if (isBioRoute()){ history.pushState ? history.pushState(null, '', location.pathname + location.search) : (location.hash = ''); }
+    close();
+  });
+  if (isBioRoute()) setTimeout(route, 0);
+})();
+</script>
 
 <script>
 /* ============================================================
