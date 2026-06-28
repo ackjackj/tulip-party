@@ -1,4 +1,4 @@
-<!-- build-101112 -->
+<!-- build-133738 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -483,6 +483,11 @@ body.editing .bio-ptext,body.editing .bio-mem-text,body.editing .bio-mem-name,bo
 .bio-inline-edit:focus{outline:2px solid var(--red);outline-offset:0}
 .pw-go{margin-top:14px;width:100%;background:var(--red);border:0;color:#fff;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
 .pw-cancel{margin-top:8px;width:100%;background:transparent;border:1px solid rgba(255,255,255,.25);color:var(--txt2);border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+#bio-savebar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:6;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(10,10,12,.96);border-top:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
+body.editing #bio-savebar{display:flex}
+#bio-save-hint{font-size:12px;color:var(--txt2);line-height:1.4}
+#bio-save-btn{flex:0 0 auto;background:#27E6A5;color:#06281d;border:0;border-radius:10px;padding:13px 22px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+#bio-save-btn:disabled{opacity:.7}
 
 #thanks-page{position:fixed;inset:0;z-index:200;background:#070406;overflow-y:auto;opacity:0;transition:opacity .32s ease;-webkit-overflow-scrolling:touch}
 #thanks-page.open{opacity:1}
@@ -3059,6 +3064,7 @@ if ('serviceWorker' in navigator) {
     <div class="bio-timeline" id="bio-timeline"></div>
     <button type="button" id="bio-tl-add" class="bio-add">＋ 年表に追加</button>
   </div>
+  <div id="bio-savebar"><span id="bio-save-hint">編集したら保存してね</span><button type="button" id="bio-save-btn">全員に共有</button></div>
 </div>
 
 <script>
@@ -3283,6 +3289,20 @@ if ('serviceWorker' in navigator) {
   });
   var tlAdd = document.getElementById('bio-tl-add');
   if (tlAdd) tlAdd.addEventListener('click', function(){ editYear(null); });
+
+  /* ---- 保存ボタン(BIOGRAPHYページ内) ---- */
+  var saveBtn = document.getElementById('bio-save-btn');
+  if (saveBtn) saveBtn.addEventListener('click', async function(){
+    var btn = this;
+    if (window.tpSite && window.tpSite.isReady()){
+      var orig = btn.textContent;
+      btn.disabled = true; btn.textContent = '保存中…';
+      var ok = false;
+      try { ok = await window.tpSite.publish(); } catch(e){ ok = false; }
+      btn.textContent = ok ? '✓ 共有しました' : '保存に失敗';
+      setTimeout(function(){ btn.textContent = orig; btn.disabled = false; }, 1800);
+    } else if (window.tpSite){ window.tpSite.openSyncSetup(); }
+  });
 
   /* ---- 編集モード切替で再描画 ---- */
   var lastEd = isEditing();
